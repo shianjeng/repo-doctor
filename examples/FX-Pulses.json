@@ -1,14 +1,15 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": "shianjeng/FX-Pulses",
   "url": "https://github.com/shianjeng/FX-Pulses",
+  "defaultBranch": "main",
   "description": "Privacy-friendly, login-free Chrome & Edge extension for exchange rates: market quotes, central-bank reference rates for 30+ currencies, trend charts, a watchlist and in-page conversion. Works out of the box — data refreshes every 4 hours on GitHub Pages, no server or API key needed.",
   "language": "JavaScript",
   "stars": 0,
-  "checkedAt": "2026-09-27T17:59:09.749Z",
-  "score": 66,
+  "checkedAt": "2026-09-27T18:30:08.447Z",
+  "score": 64,
   "coverage": 100,
-  "earned": 66,
+  "earned": 64,
   "health": "Needs attention",
   "categories": [
     {
@@ -17,7 +18,7 @@
     },
     {
       "name": "Community",
-      "score": 50
+      "score": 40
     },
     {
       "name": "CI/CD",
@@ -40,7 +41,12 @@
       "weight": 10,
       "status": "pass",
       "evidence": "GitHub returned a non-empty README.",
-      "fix": "Write a README explaining what the project does, who it is for, and how to get started."
+      "fix": "Write a README explaining what the project does, who it is for, and how to get started.",
+      "action": {
+        "label": "Create README.md on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=README.md",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=README.md&value=%23%20FX-Pulses%0A%0AOne%20sentence%20on%20what%20this%20project%20does%20and%20who%20it%20is%20for.%0A%0A%23%23%20Installation%0A%0A%60%60%60bash%0A%23%20the%20command%20a%20new%20user%20should%20run%20first%0A%60%60%60%0A%0A%23%23%20Usage%0A%0A%60%60%60bash%0A%23%20a%20minimal%20example%20and%20its%20output%0A%60%60%60%0A%0A%23%23%20License%0A%0ASee%20%5BLICENSE%5D(LICENSE).%0A"
+      }
     },
     {
       "id": "installation",
@@ -49,7 +55,11 @@
       "weight": 5,
       "status": "pass",
       "evidence": "README scanned for installation or quick-start instructions.",
-      "fix": "Add an Installation or Quick start section with a tested, copyable command."
+      "fix": "Add an Installation or Quick start section with a tested, copyable command.",
+      "action": {
+        "label": "Edit README on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/edit/main/README.md"
+      }
     },
     {
       "id": "usage",
@@ -58,7 +68,11 @@
       "weight": 5,
       "status": "pass",
       "evidence": "README scanned for a usage or examples heading.",
-      "fix": "Show a minimal input/output example under a Usage heading."
+      "fix": "Show a minimal input/output example under a Usage heading.",
+      "action": {
+        "label": "Edit README on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/edit/main/README.md"
+      }
     },
     {
       "id": "demo",
@@ -66,8 +80,12 @@
       "title": "Demo or visual preview",
       "weight": 3,
       "status": "pass",
-      "evidence": "README scanned for a non-badge image, video, or labeled demo link.",
-      "fix": "Add a screenshot, demo GIF, or live demo link above installation."
+      "evidence": "README scanned for a non-badge image, video, or labeled demo link, and the repository website field checked.",
+      "fix": "Add a screenshot, demo GIF, or live demo link above installation, or set the repository website.",
+      "action": {
+        "label": "Edit README on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/edit/main/README.md"
+      }
     },
     {
       "id": "badge",
@@ -76,7 +94,12 @@
       "weight": 2,
       "status": "pass",
       "evidence": "README scanned for a recognized CI badge URL.",
-      "fix": "Add a CI status badge linked to the workflow results."
+      "fix": "Add a CI status badge linked to the workflow results.",
+      "action": {
+        "label": "Edit README on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/edit/main/README.md",
+        "snippet": "[![CI](https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg)](https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml)"
+      }
     },
     {
       "id": "license",
@@ -85,7 +108,11 @@
       "weight": 8,
       "status": "pass",
       "evidence": "GitHub identified MIT.",
-      "fix": "Choose an appropriate open-source license and add its full text in LICENSE."
+      "fix": "Choose an appropriate open-source license and add its full text in LICENSE.",
+      "action": {
+        "label": "Choose a license on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/community/license/new?branch=main"
+      }
     },
     {
       "id": "contributing",
@@ -94,7 +121,12 @@
       "weight": 5,
       "status": "warn",
       "evidence": "Checked repository and GitHub community-profile contributing files.",
-      "fix": "Add CONTRIBUTING.md with setup, checks, and the pull request process."
+      "fix": "Add CONTRIBUTING.md with setup, checks, and the pull request process.",
+      "action": {
+        "label": "Create CONTRIBUTING.md on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=CONTRIBUTING.md",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=CONTRIBUTING.md&value=%23%20Contributing%20to%20shianjeng%2FFX-Pulses%0A%0AThanks%20for%20helping%20out!%0A%0A%23%23%20Getting%20started%0A%0A1.%20Fork%20the%20repository%20and%20create%20a%20branch%20from%20the%20default%20branch.%0A2.%20Install%20the%20dependencies%20and%20run%20the%20tests%20(see%20the%20README).%0A3.%20Make%20your%20change%2C%20adding%20a%20test%20when%20you%20fix%20a%20bug%20or%20add%20a%20feature.%0A%0A%23%23%20Pull%20requests%0A%0A-%20Keep%20each%20pull%20request%20focused%20on%20one%20change.%0A-%20Explain%20the%20problem%2C%20the%20fix%2C%20and%20how%20you%20tested%20it.%0A-%20Make%20sure%20the%20checks%20pass%20before%20asking%20for%20review.%0A%0A%23%23%20Reporting%20bugs%20and%20ideas%0A%0AOpen%20an%20issue%20with%20the%20steps%20to%20reproduce%2C%20what%20you%20expected%2C%20and%20what%20happened%20instead.%20Look%20for%20issues%20labeled%20**good%20first%20issue**%20if%20you%20are%20new%20here.%0A"
+      }
     },
     {
       "id": "conduct",
@@ -103,7 +135,11 @@
       "weight": 2,
       "status": "warn",
       "evidence": "Checked repository and GitHub community-profile conduct files.",
-      "fix": "Add a CODE_OF_CONDUCT.md and a working private reporting channel."
+      "fix": "Add a CODE_OF_CONDUCT.md and a working private reporting channel.",
+      "action": {
+        "label": "Add a code of conduct on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/community/code-of-conduct/new?branch=main"
+      }
     },
     {
       "id": "templates",
@@ -112,16 +148,24 @@
       "weight": 3,
       "status": "warn",
       "evidence": "Scanned for issue templates and issue forms.",
-      "fix": "Add a bug report and feature request template in .github/ISSUE_TEMPLATE/."
+      "fix": "Add a bug report and feature request template in .github/ISSUE_TEMPLATE/.",
+      "action": {
+        "label": "Set up issue templates on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/issues/templates/edit"
+      }
     },
     {
       "id": "first-issue",
       "category": "Community",
-      "title": "Good first issue label",
+      "title": "Good first issues",
       "weight": 2,
-      "status": "pass",
-      "evidence": "Checked for the standard “good first issue” label; this does not verify labeled open issues.",
-      "fix": "Create a good first issue label and apply it to a small, well-described task."
+      "status": "warn",
+      "evidence": "Looked for at least one issue (open or closed) labeled “good first issue”. GitHub creates the label by default, so the label alone does not count.",
+      "fix": "Label a small, well-described task as good first issue so newcomers know where to start.",
+      "action": {
+        "label": "Open a good first issue on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/issues/new?labels=good%20first%20issue"
+      }
     },
     {
       "id": "ci",
@@ -130,7 +174,12 @@
       "weight": 10,
       "status": "pass",
       "evidence": "Recognized automation configuration. Workflow execution and passing status are not verified.",
-      "fix": "Add a CI workflow that runs the project’s checks on pushes and pull requests."
+      "fix": "Add a CI workflow that runs the project’s checks on pushes and pull requests.",
+      "action": {
+        "label": "Create a CI workflow on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.github%2Fworkflows%2Fci.yml",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.github%2Fworkflows%2Fci.yml&value=name%3A%20CI%0Aon%3A%0A%20%20push%3A%0A%20%20pull_request%3A%0Apermissions%3A%0A%20%20contents%3A%20read%0Ajobs%3A%0A%20%20test%3A%0A%20%20%20%20runs-on%3A%20ubuntu-latest%0A%20%20%20%20steps%3A%0A%20%20%20%20%20%20-%20uses%3A%20actions%2Fcheckout%40v7%0A%20%20%20%20%20%20-%20uses%3A%20actions%2Fsetup-node%40v7%0A%20%20%20%20%20%20%20%20with%3A%0A%20%20%20%20%20%20%20%20%20%20node-version%3A%20lts%2F*%0A%20%20%20%20%20%20-%20run%3A%20npm%20ci%0A%20%20%20%20%20%20-%20run%3A%20npm%20test%0A"
+      }
     },
     {
       "id": "tests",
@@ -139,7 +188,8 @@
       "weight": 6,
       "status": "pass",
       "evidence": "Scanned conventional test paths and filenames; coverage and correctness are not measured.",
-      "fix": "Add a focused test for the main user journey and run it in CI."
+      "fix": "Add a focused test for the main user journey and run it in CI.",
+      "action": null
     },
     {
       "id": "releases",
@@ -148,7 +198,11 @@
       "weight": 4,
       "status": "warn",
       "evidence": "No published, non-draft, non-prerelease GitHub release found.",
-      "fix": "Publish a versioned GitHub release with installation details and change notes."
+      "fix": "Publish a versioned GitHub release with installation details and change notes.",
+      "action": {
+        "label": "Draft a release on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/releases/new"
+      }
     },
     {
       "id": "security",
@@ -157,7 +211,12 @@
       "weight": 10,
       "status": "warn",
       "evidence": "Scanned this repository for SECURITY.md or an equivalent conventional policy file.",
-      "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route."
+      "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route.",
+      "action": {
+        "label": "Create SECURITY.md on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=SECURITY.md",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=SECURITY.md&value=%23%20Security%20policy%0A%0A%23%23%20Supported%20versions%0A%0AOnly%20the%20latest%20release%20of%20shianjeng%2FFX-Pulses%20receives%20security%20fixes.%0A%0A%23%23%20Reporting%20a%20vulnerability%0A%0APlease%20do%20not%20open%20a%20public%20issue%20for%20security%20problems.%0A%0AUse%20**Security%20%E2%86%92%20Report%20a%20vulnerability**%20on%20GitHub%20to%20send%20a%20private%20report.%20Include%20the%20affected%20version%2C%20steps%20to%20reproduce%2C%20and%20the%20impact%20you%20observed.%0A%0AWe%20will%20acknowledge%20your%20report%2C%20keep%20you%20updated%20while%20we%20investigate%2C%20and%20credit%20you%20in%20the%20release%20notes%20if%20you%20wish.%0A"
+      }
     },
     {
       "id": "dependencies",
@@ -166,7 +225,12 @@
       "weight": 5,
       "status": "warn",
       "evidence": "Scanned for Dependabot or Renovate configuration. Organization settings are not visible here.",
-      "fix": "Configure Dependabot or Renovate for supported dependency ecosystems."
+      "fix": "Configure Dependabot or Renovate for supported dependency ecosystems.",
+      "action": {
+        "label": "Create dependabot.yml on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.github%2Fdependabot.yml",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.github%2Fdependabot.yml&value=version%3A%202%0Aupdates%3A%0A%20%20-%20package-ecosystem%3A%20npm%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A%20%20-%20package-ecosystem%3A%20pip%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A%20%20-%20package-ecosystem%3A%20docker%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A%20%20-%20package-ecosystem%3A%20github-actions%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A"
+      }
     },
     {
       "id": "security-automation",
@@ -175,7 +239,11 @@
       "weight": 5,
       "status": "warn",
       "evidence": "Workflow filenames are a heuristic. Default setup and organization-level scanners may not be visible.",
-      "fix": "Add a suitable security scanner, or verify your existing GitHub default setup manually."
+      "fix": "Add a suitable security scanner, or verify your existing GitHub default setup manually.",
+      "action": {
+        "label": "Open code security settings",
+        "url": "https://github.com/shianjeng/FX-Pulses/settings/security_analysis"
+      }
     },
     {
       "id": "manifest",
@@ -184,7 +252,8 @@
       "weight": 6,
       "status": "pass",
       "evidence": "Scanned for recognized package or build manifests.",
-      "fix": "Add a standard package/build manifest, or document how this repository is organized."
+      "fix": "Add a standard package/build manifest, or document how this repository is organized.",
+      "action": null
     },
     {
       "id": "lockfile",
@@ -192,8 +261,9 @@
       "title": "Dependency lockfile",
       "weight": 4,
       "status": "pass",
-      "evidence": "Scanned recognized lockfiles. Some libraries intentionally omit them.",
-      "fix": "Commit a dependency lockfile when appropriate for your ecosystem and distribution model."
+      "evidence": "Scanned recognized lockfiles and pinned requirement files. Some libraries intentionally omit them.",
+      "fix": "Commit a dependency lockfile when appropriate for your ecosystem and distribution model.",
+      "action": null
     },
     {
       "id": "layout",
@@ -202,7 +272,8 @@
       "weight": 3,
       "status": "pass",
       "evidence": "Scanned conventional source, documentation, and example directories.",
-      "fix": "Group source, documentation, or examples in a clearly named directory."
+      "fix": "Group source, documentation, or examples in a clearly named directory.",
+      "action": null
     },
     {
       "id": "editor",
@@ -211,10 +282,20 @@
       "weight": 2,
       "status": "pass",
       "evidence": "Scanned conventional formatting/lint configuration filenames.",
-      "fix": "Add an .editorconfig or an ecosystem-specific formatter configuration."
+      "fix": "Add an .editorconfig or an ecosystem-specific formatter configuration.",
+      "action": {
+        "label": "Create .editorconfig on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.editorconfig",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.editorconfig&value=root%20%3D%20true%0A%0A%5B*%5D%0Acharset%20%3D%20utf-8%0Aend_of_line%20%3D%20lf%0Aindent_style%20%3D%20space%0Aindent_size%20%3D%202%0Ainsert_final_newline%20%3D%20true%0Atrim_trailing_whitespace%20%3D%20true%0A%0A%5B*.md%5D%0Atrim_trailing_whitespace%20%3D%20false%0A"
+      }
     }
   ],
   "notes": [],
+  "rateLimit": {
+    "remaining": 4979,
+    "limit": 5000,
+    "reset": "2026-09-27T19:20:07.000Z"
+  },
   "suggestions": [
     {
       "id": "security",
@@ -223,7 +304,12 @@
       "weight": 10,
       "status": "warn",
       "evidence": "Scanned this repository for SECURITY.md or an equivalent conventional policy file.",
-      "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route."
+      "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route.",
+      "action": {
+        "label": "Create SECURITY.md on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=SECURITY.md",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=SECURITY.md&value=%23%20Security%20policy%0A%0A%23%23%20Supported%20versions%0A%0AOnly%20the%20latest%20release%20of%20shianjeng%2FFX-Pulses%20receives%20security%20fixes.%0A%0A%23%23%20Reporting%20a%20vulnerability%0A%0APlease%20do%20not%20open%20a%20public%20issue%20for%20security%20problems.%0A%0AUse%20**Security%20%E2%86%92%20Report%20a%20vulnerability**%20on%20GitHub%20to%20send%20a%20private%20report.%20Include%20the%20affected%20version%2C%20steps%20to%20reproduce%2C%20and%20the%20impact%20you%20observed.%0A%0AWe%20will%20acknowledge%20your%20report%2C%20keep%20you%20updated%20while%20we%20investigate%2C%20and%20credit%20you%20in%20the%20release%20notes%20if%20you%20wish.%0A"
+      }
     },
     {
       "id": "contributing",
@@ -232,7 +318,12 @@
       "weight": 5,
       "status": "warn",
       "evidence": "Checked repository and GitHub community-profile contributing files.",
-      "fix": "Add CONTRIBUTING.md with setup, checks, and the pull request process."
+      "fix": "Add CONTRIBUTING.md with setup, checks, and the pull request process.",
+      "action": {
+        "label": "Create CONTRIBUTING.md on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=CONTRIBUTING.md",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=CONTRIBUTING.md&value=%23%20Contributing%20to%20shianjeng%2FFX-Pulses%0A%0AThanks%20for%20helping%20out!%0A%0A%23%23%20Getting%20started%0A%0A1.%20Fork%20the%20repository%20and%20create%20a%20branch%20from%20the%20default%20branch.%0A2.%20Install%20the%20dependencies%20and%20run%20the%20tests%20(see%20the%20README).%0A3.%20Make%20your%20change%2C%20adding%20a%20test%20when%20you%20fix%20a%20bug%20or%20add%20a%20feature.%0A%0A%23%23%20Pull%20requests%0A%0A-%20Keep%20each%20pull%20request%20focused%20on%20one%20change.%0A-%20Explain%20the%20problem%2C%20the%20fix%2C%20and%20how%20you%20tested%20it.%0A-%20Make%20sure%20the%20checks%20pass%20before%20asking%20for%20review.%0A%0A%23%23%20Reporting%20bugs%20and%20ideas%0A%0AOpen%20an%20issue%20with%20the%20steps%20to%20reproduce%2C%20what%20you%20expected%2C%20and%20what%20happened%20instead.%20Look%20for%20issues%20labeled%20**good%20first%20issue**%20if%20you%20are%20new%20here.%0A"
+      }
     },
     {
       "id": "dependencies",
@@ -241,7 +332,12 @@
       "weight": 5,
       "status": "warn",
       "evidence": "Scanned for Dependabot or Renovate configuration. Organization settings are not visible here.",
-      "fix": "Configure Dependabot or Renovate for supported dependency ecosystems."
+      "fix": "Configure Dependabot or Renovate for supported dependency ecosystems.",
+      "action": {
+        "label": "Create dependabot.yml on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.github%2Fdependabot.yml",
+        "prefill": "https://github.com/shianjeng/FX-Pulses/new/main?filename=.github%2Fdependabot.yml&value=version%3A%202%0Aupdates%3A%0A%20%20-%20package-ecosystem%3A%20npm%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A%20%20-%20package-ecosystem%3A%20pip%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A%20%20-%20package-ecosystem%3A%20docker%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A%20%20-%20package-ecosystem%3A%20github-actions%0A%20%20%20%20directory%3A%20%2F%0A%20%20%20%20schedule%3A%0A%20%20%20%20%20%20interval%3A%20weekly%0A"
+      }
     },
     {
       "id": "security-automation",
@@ -250,7 +346,11 @@
       "weight": 5,
       "status": "warn",
       "evidence": "Workflow filenames are a heuristic. Default setup and organization-level scanners may not be visible.",
-      "fix": "Add a suitable security scanner, or verify your existing GitHub default setup manually."
+      "fix": "Add a suitable security scanner, or verify your existing GitHub default setup manually.",
+      "action": {
+        "label": "Open code security settings",
+        "url": "https://github.com/shianjeng/FX-Pulses/settings/security_analysis"
+      }
     },
     {
       "id": "releases",
@@ -259,7 +359,11 @@
       "weight": 4,
       "status": "warn",
       "evidence": "No published, non-draft, non-prerelease GitHub release found.",
-      "fix": "Publish a versioned GitHub release with installation details and change notes."
+      "fix": "Publish a versioned GitHub release with installation details and change notes.",
+      "action": {
+        "label": "Draft a release on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/releases/new"
+      }
     },
     {
       "id": "templates",
@@ -268,7 +372,11 @@
       "weight": 3,
       "status": "warn",
       "evidence": "Scanned for issue templates and issue forms.",
-      "fix": "Add a bug report and feature request template in .github/ISSUE_TEMPLATE/."
+      "fix": "Add a bug report and feature request template in .github/ISSUE_TEMPLATE/.",
+      "action": {
+        "label": "Set up issue templates on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/issues/templates/edit"
+      }
     },
     {
       "id": "conduct",
@@ -277,7 +385,24 @@
       "weight": 2,
       "status": "warn",
       "evidence": "Checked repository and GitHub community-profile conduct files.",
-      "fix": "Add a CODE_OF_CONDUCT.md and a working private reporting channel."
+      "fix": "Add a CODE_OF_CONDUCT.md and a working private reporting channel.",
+      "action": {
+        "label": "Add a code of conduct on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/community/code-of-conduct/new?branch=main"
+      }
+    },
+    {
+      "id": "first-issue",
+      "category": "Community",
+      "title": "Good first issues",
+      "weight": 2,
+      "status": "warn",
+      "evidence": "Looked for at least one issue (open or closed) labeled “good first issue”. GitHub creates the label by default, so the label alone does not count.",
+      "fix": "Label a small, well-described task as good first issue so newcomers know where to start.",
+      "action": {
+        "label": "Open a good first issue on GitHub",
+        "url": "https://github.com/shianjeng/FX-Pulses/issues/new?labels=good%20first%20issue"
+      }
     }
   ],
   "disclaimer": "Repository hygiene signals, not a security audit or code-quality guarantee. File detection is heuristic; CI results and test coverage are not verified."

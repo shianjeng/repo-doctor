@@ -908,3 +908,82 @@ footer p {
 .method h2 {
   font-size:26px}
 }
+
+/* One-click fixes, sharing, badge, and recent checks. */
+.report-actions {
+  flex-wrap:wrap;
+  justify-content:flex-end}
+.fix-link {
+  display:inline-block;
+  color:var(--green);
+  font-weight:500;
+  border-bottom:1px solid #b9cba0;
+  margin-top:4px}
+.fix-link:hover {
+  border-bottom-color:var(--green)}
+.check-actions {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+  margin:0 25px 14px 30px;
+  font-size:14px}
+.check-actions code {
+  flex-basis:100%!important}
+.check-actions code,.badge-box code {
+  font:12px/1.6 'IBM Plex Mono',monospace;
+  background:#f1f3ea;
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:6px 8px;
+  overflow-wrap:anywhere;
+  flex:1 1 260px;
+  color:#44503f}
+.copy-button {
+  background:#fff;
+  border:1px solid #cbd0c1;
+  border-radius:4px;
+  padding:6px 10px;
+  font-size:12px}
+#open-issue {
+  margin-top:18px}
+.recent {
+  margin-top:10px}
+.recent button b {
+  font:500 12px 'IBM Plex Mono',monospace;
+  color:var(--green);
+  margin-left:6px}
+.badge-section {
+  display:grid;
+  grid-template-columns:304px 1fr;
+  gap:22px;
+  padding:30px 0;
+  border-top:1px solid var(--line)}
+.badge-section h2 {
+  font-size:28px;
+  letter-spacing:-1px;
+  margin:13px 0 9px;
+  font-weight:500}
+.badge-section h2 span {
+  color:#799459}
+.badge-section p {
+  font-size:14px;
+  color:var(--muted);
+  line-height:1.6}
+.badge-box {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:14px;
+  align-self:center}
+.badge-box img {
+  height:20px}
+@media(max-width:600px) {
+  .badge-section {
+  grid-template-columns:1fr}
+.report-actions {
+  justify-content:flex-start}
+.check-actions {
+  margin-left:0;
+  margin-right:0}
+}

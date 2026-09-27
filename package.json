@@ -1,6 +1,6 @@
 {
   "name": "@shianjeng/repo-doctor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Paste a GitHub repository URL. Get a 30-second open-source health check.",
   "type": "module",
   "bin": { "repo-doctor": "bin/repo-doctor.js" },
@@ -8,5 +8,9 @@
   "files": ["bin", "dist/lib", "README.md", "LICENSE"],
   "scripts": { "start": "node scripts/serve.js", "test": "node --test", "check": "node scripts/check.js" },
   "engines": { "node": ">=22" },
+  "keywords": ["github", "open-source", "repository", "health-check", "cli", "readme", "community-standards"],
+  "homepage": "https://repo-doctor.hank-vermilion.workers.dev",
+  "repository": { "type": "git", "url": "git+https://github.com/shianjeng/repo-doctor.git" },
+  "bugs": "https://github.com/shianjeng/repo-doctor/issues",
   "license": "MIT"
 }
