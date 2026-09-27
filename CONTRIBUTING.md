@@ -14,4 +14,6 @@ The browser and CLI share `dist/lib/doctor.js`. Put scoring changes there, expla
 
 Use a small branch and pull request explaining the user-visible problem, the fix, and validation. Do not include tokens or private repository data in fixtures. Do not change a weight just to make a demo score higher. Maintain the 100-point total and preserve unknown-data handling.
 
-Suitable first contributions: recognize another package ecosystem, improve README heading detection for another language, or add a regression test for a false positive. Maintainers should create a `good first issue` label after publishing the repository.
+Interface text lives in `dist/i18n.js` (English, 简体中文, 日本語). When you add or change a string, update every language; the tests fail on untranslated text.
+
+Suitable first contributions: recognize another package ecosystem, improve README heading detection for another language, add a regression test for a false positive, or improve a translation. Maintainers should create a `good first issue` label after publishing the repository.

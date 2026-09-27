@@ -65,7 +65,11 @@ export async function main(args = process.argv.slice(2), { analyze = analyzeRepo
       return 2;
     }
     return minimum !== undefined && (report.score === null || report.score < minimum) ? 1 : 0;
-  } catch (error) { stderr.write(`Repo Doctor: ${clean(error.message)}\n`); return 2; }
+  } catch (error) {
+    stderr.write(`Repo Doctor: ${clean(error.message)}\n`);
+    if (error.code === 'rate_limit' && !env.GITHUB_TOKEN) stderr.write('Set GITHUB_TOKEN to raise the limit from 60 to 5,000 requests per hour.\n');
+    return 2;
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) process.exitCode = await main();

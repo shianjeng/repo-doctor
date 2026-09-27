@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 — 2026-09-28
+
+### Added
+
+- Server checks: `/api/check` on Cloudflare Workers runs checks with the site’s own `GITHUB_TOKEN` secret (5,000 requests per hour instead of 60 per visitor IP) and caches each repository for ten minutes. Without the secret, the page keeps calling GitHub from the browser. The server refuses private repositories even if its token could read them.
+- The website in English, 简体中文, and 日本語: follows the browser language, with a switcher and `?lang=` links. Every check, fix, note, roast, and error is translated.
+- README translations (README.zh-CN.md, README.ja.md) and screenshots of the website and CLI.
+
+### Changed
+
+- Rate-limit errors are friendlier and show the reset time in the visitor’s local time.
+- The search box starts empty, and the example repository buttons were removed.
+- `npm start` serves `/api/check` too; run it with `GITHUB_TOKEN` to test server checks locally.
+- 使用说明.md was replaced by README.zh-CN.md.
+
 ## 0.2.0 — 2026-09-28
 
 ### Added

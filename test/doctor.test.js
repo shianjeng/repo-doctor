@@ -234,3 +234,78 @@ test('CLI badge and issue modes print one line each', async () => {
   const issue = await cli(['o/r', '--issue']);
   assert.match(issue.out, /^https:\/\/github\.com\/octocat\/hello-world\/issues\/new\?title=/);
 });
+
+test('server endpoint needs a token, validates input, hides private repositories, and caches by repository', async () => {
+  const { handleCheck } = await import('../worker/index.js');
+  const url = repo => new URL(`https://doctor.example/api/check?repo=${encodeURIComponent(repo)}`);
+  assert.equal((await handleCheck(url('o/r'), {})).status, 503);
+  assert.equal((await handleCheck(url('not a repo'), { GITHUB_TOKEN: 't' })).status, 400);
+
+  const seen = [];
+  const analyze = async (repo, options) => { seen.push({ repo, options }); return { ...evaluateRepository(fixture(allPaths)), rateLimit: { remaining: 4999 } }; };
+  const store = new Map();
+  const cache = { match: async key => store.get(key.url)?.clone(), put: async (key, response) => { store.set(key.url, response); } };
+  const pending = [];
+  const first = await handleCheck(url('https://github.com/O/R?tab=readme-ov-file'), { GITHUB_TOKEN: 't' }, { analyze, cache, waitUntil: p => pending.push(p) });
+  await Promise.all(pending);
+  const body = await first.json();
+  assert.equal(first.status, 200); assert.equal(body.score, 100); assert.equal(body.rateLimit, null); assert.equal(body.checkedBy, 'server');
+  assert.deepEqual(seen[0].options, { token: 't', publicOnly: true, timeout: 20000 });
+  assert.equal((await handleCheck(url('o/r'), { GITHUB_TOKEN: 't' }, { analyze, cache })).status, 200);
+  assert.equal(seen.length, 1, 'second request is served from cache');
+
+  const failing = code => async () => { throw Object.assign(new Error('x'), { code, resetAt: code === 'rate_limit' ? '2030-01-01T00:00:00.000Z' : null }); };
+  assert.equal((await handleCheck(url('o/r'), { GITHUB_TOKEN: 't' }, { analyze: failing('not_found') })).status, 404);
+  const limited = await handleCheck(url('o/r'), { GITHUB_TOKEN: 't' }, { analyze: failing('rate_limit') });
+  assert.equal(limited.status, 429); assert.equal((await limited.json()).resetAt, '2030-01-01T00:00:00.000Z');
+});
+
+test('publicOnly refuses private repositories even when the token can read them', async () => {
+  const fetchImpl = async url => url.endsWith('/o/r') ? Response.json({ full_name: 'o/r', private: true }) : new Response('', { status: 404 });
+  await assert.rejects(analyzeRepository('o/r', { fetchImpl, publicOnly: true }), error => error.code === 'not_found');
+});
+
+test('rate-limit errors carry a code and reset time for translated messages', async () => {
+  await assert.rejects(analyzeRepository('o/r', { fetchImpl: async () => new Response('', { status: 403, headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1800000000' } }) }),
+    error => error.code === 'rate_limit' && error.resetAt === '2027-01-15T08:00:00.000Z');
+});
+
+test('Chinese and Japanese translations cover every check, variant, note, and roast', async () => {
+  const { localizeReport, roastText, t, errorText, detectLanguage } = await import('../dist/i18n.js');
+  const variants = [fixture([]), fixture(allPaths), fixture(['docs/x.md'])];
+  variants[0].repo.homepage = 'https://example.org'; variants[0].sources.readme.value = '# x';
+  variants[1].repo.has_issues = false; variants[1].sources.release = ok(null);
+  variants[2].sources.readme = { ok: false, error: 'GitHub API rate limit reached. It resets at 2030-01-01T00:00:00.000Z.' };
+  variants[2].repo.fork = true; variants[2].repo.archived = true; variants[2].repo.topics = []; variants[2].sources.community = ok(null);
+  for (const lang of ['zh', 'ja']) {
+    for (const data of variants) {
+      const report = evaluateRepository(data);
+      const L = localizeReport(lang, report);
+      for (const c of report.checks) {
+        const text = L.check(c);
+        if (c.id !== 'readme') assert.notEqual(text.title, c.title, `${lang} title ${c.id}`);
+        assert.notEqual(text.fix, c.fix, `${lang} fix ${c.id}`);
+        assert.notEqual(text.evidence, c.evidence, `${lang} evidence ${c.id} ${c.status}`);
+        if (c.action) assert.notEqual(text.actionLabel, c.action.label, `${lang} action ${c.id}`);
+      }
+      L.notes.forEach((note, i) => assert.notEqual(note, report.notes[i], `${lang} note ${report.notes[i]}`));
+      assert.notEqual(L.health, report.health); assert.notEqual(L.disclaimer, report.disclaimer);
+    }
+    for (const id of ['readme', 'ci', 'security', 'license', 'tests', 'contributing', 'installation', 'usage', 'releases', 'demo', 'dependencies', 'partial', 'minor', 'clean'])
+      assert.notEqual(roastText(lang, id, 'EN'), 'EN', `${lang} roast ${id}`);
+    assert.notEqual(t(lang, 'hero.title'), t('en', 'hero.title'));
+    assert.match(errorText(lang, { code: 'rate_limit', resetAt: '2030-01-01T00:00:00.000Z' }), /\d{2}:\d{2}/);
+  }
+  assert.equal(detectLanguage('?lang=ja', 'zh', ['en-US']), 'ja');
+  assert.equal(detectLanguage('', null, ['zh-TW', 'en']), 'zh');
+  assert.equal(detectLanguage('?lang=xx', null, ['fr-FR']), 'en');
+});
+
+test('every UI string has Chinese and Japanese text', async () => {
+  const source = await import('node:fs/promises').then(fs => fs.readFile(new URL('../dist/i18n.js', import.meta.url), 'utf8'));
+  const { t } = await import('../dist/i18n.js');
+  const keys = [...source.slice(source.indexOf('en: {'), source.indexOf('zh: {')).matchAll(/'([\w.\/ ,-]+)':/g)].map(m => m[1]);
+  assert.ok(keys.length > 80);
+  const same = new Set(['action.markdown', 'action.json']);
+  for (const lang of ['zh', 'ja']) for (const key of keys) if (!same.has(key)) assert.notEqual(t(lang, key), t('en', key), `${lang} ${key}`);
+});

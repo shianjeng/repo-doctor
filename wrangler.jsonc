@@ -1,6 +1,10 @@
-// Cloudflare Workers static-asset deployment: `npx wrangler deploy`.
+// Cloudflare Workers deployment: `npx wrangler deploy`.
+// Files in dist/ are served directly; other paths (only /api/check) run worker/index.js.
+// Optional secret for server-side checks: `npx wrangler secret put GITHUB_TOKEN`
+// (or Dashboard → Settings → Variables and Secrets).
 {
   "name": "repo-doctor",
+  "main": "worker/index.js",
   "compatibility_date": "2026-09-28",
-  "assets": { "directory": "./dist" }
+  "assets": { "directory": "./dist", "binding": "ASSETS" }
 }

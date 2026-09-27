@@ -987,3 +987,36 @@ footer p {
   margin-left:0;
   margin-right:0}
 }
+
+/* Language picker and CJK typography. */
+.language select {
+  font:13px 'DM Sans',sans-serif;
+  color:var(--ink);
+  background:transparent;
+  border:1px solid #cad0c2;
+  border-radius:6px;
+  padding:9px 8px;
+  cursor:pointer}
+.language select:focus-visible {
+  outline:3px solid #92b557;
+  outline-offset:2px}
+:lang(zh),:lang(ja) {
+  font-family:'DM Sans','PingFang SC','Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK SC','Noto Sans JP','Microsoft YaHei','Yu Gothic',sans-serif}
+:lang(zh) h1,:lang(ja) h1 {
+  letter-spacing:-1px;
+  line-height:1.2}
+:lang(zh) h1 em,:lang(ja) h1 em {
+  font-family:inherit;
+  font-weight:600;
+  letter-spacing:0}
+:lang(zh) .eyebrow,:lang(ja) .eyebrow {
+  letter-spacing:.5px}
+:lang(zh) .cli-section h2,:lang(ja) .cli-section h2,:lang(zh) .method h2,:lang(ja) .method h2 {
+  letter-spacing:0}
+@media(max-width:600px) {
+  .language select {
+  padding:7px 4px;
+  font-size:12px}
+:lang(zh) h1,:lang(ja) h1 {
+  font-size:36px}
+}

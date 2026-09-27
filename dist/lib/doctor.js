@@ -1,6 +1,6 @@
 import * as templates from './templates.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 export const CATEGORIES = ['Documentation', 'Community', 'CI/CD', 'Security', 'Structure'];
 export const PROJECT_URL = 'https://github.com/shianjeng/repo-doctor';
 
@@ -30,11 +30,14 @@ export function parseRepo(input) {
 }
 
 export class GitHubError extends Error {
-  constructor(message, status) { super(message); this.name = 'GitHubError'; this.status = status; }
+  constructor(message, status, { code = null, resetAt = null } = {}) {
+    super(message); this.name = 'GitHubError'; this.status = status; this.code = code; this.resetAt = resetAt;
+  }
 }
 
 // No arbitrary URLs, repository execution, cloning, or HTML rendering.
-export async function collectRepository(input, { token, fetchImpl = fetch, timeout = 25000, onProgress = () => {} } = {}) {
+// publicOnly: refuse private repositories even if the token could read them (used by the website's server).
+export async function collectRepository(input, { token, fetchImpl = fetch, timeout = 25000, onProgress = () => {}, publicOnly = false } = {}) {
   const name = parseRepo(input);
   const signal = AbortSignal.timeout(timeout);
   const headers = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
@@ -47,7 +50,9 @@ export async function collectRepository(input, { token, fetchImpl = fetch, timeo
         headers: text ? { ...headers, Accept: 'application/vnd.github.raw+json' } : headers, signal,
       });
     } catch {
-      throw new GitHubError(signal.aborted ? 'The GitHub check timed out. Please try again.' : 'Could not reach GitHub. Check your connection and try again.', 0);
+      throw signal.aborted
+        ? new GitHubError('The GitHub check timed out. Please try again.', 0, { code: 'timeout' })
+        : new GitHubError('Could not reach GitHub. Check your connection and try again.', 0, { code: 'network' });
     }
     const remaining = Number(response.headers.get('x-ratelimit-remaining'));
     const limit = Number(response.headers.get('x-ratelimit-limit'));
@@ -57,21 +62,22 @@ export async function collectRepository(input, { token, fetchImpl = fetch, timeo
     }
     if (absent.includes(response.status)) return null;
     if (!response.ok) {
-      let message = `GitHub returned HTTP ${response.status}.`;
-      if (response.status === 404) message = 'Repository not found or not accessible. Check its spelling; the website supports public repositories.';
-      if (response.status === 401) message = 'GitHub rejected the token. Check GITHUB_TOKEN.';
-      if (response.status === 403 || response.status === 429) {
-        const reset = response.headers.get('x-ratelimit-reset');
-        message = response.headers.get('x-ratelimit-remaining') === '0' || response.status === 429
-          ? `GitHub API rate limit reached.${reset ? ` Resets at ${new Date(Number(reset) * 1000).toISOString()}.` : ' Try again later.'} The CLI supports GITHUB_TOKEN.`
-          : 'GitHub denied this request. Check access permissions or try again later.';
+      const status = response.status;
+      if (status === 404) throw new GitHubError('Repository not found or not accessible. Check its spelling; the website supports public repositories.', status, { code: 'not_found' });
+      if (status === 401) throw new GitHubError('GitHub rejected the token. Check GITHUB_TOKEN.', status, { code: 'bad_token' });
+      if (status === 429 || (status === 403 && response.headers.get('x-ratelimit-remaining') === '0')) {
+        const reset = Number(response.headers.get('x-ratelimit-reset'));
+        const resetAt = reset ? new Date(reset * 1000).toISOString() : null;
+        throw new GitHubError(`GitHub API rate limit reached.${resetAt ? ` It resets at ${resetAt}.` : ' Try again later.'}`, status, { code: 'rate_limit', resetAt });
       }
-      throw new GitHubError(message, response.status);
+      if (status === 403) throw new GitHubError('GitHub denied this request. Check access permissions or try again later.', status, { code: 'denied' });
+      throw new GitHubError(`GitHub returned HTTP ${status}.`, status);
     }
     return text ? response.text() : response.json();
   }
   onProgress('Finding repository');
   const repo = await request('');
+  if (publicOnly && repo.private) throw new GitHubError('Repository not found or not accessible. Check its spelling; the website supports public repositories.', 404, { code: 'not_found' });
   onProgress('Reading README, project files, and community signals');
   const tasks = {
     tree: () => request(`/git/trees/${encodeURIComponent(repo.default_branch || 'HEAD')}?recursive=1`, { absent: [409] }),
@@ -243,14 +249,23 @@ const ROASTS = {
   releases: 'No releases — just a main branch and a prayer. Tag something; your future self will thank you.',
   demo: 'A thousand lines of README, and still no show-and-tell. Give your project its close-up.',
   dependencies: 'Your dependencies are aging like milk, and nobody is checking the date. Let a bot do it.',
+
+  partial: 'The lab results are incomplete. Even a roast needs evidence.',
+  minor: 'Only minor paperwork left. It is hard to roast a repo that flosses.',
+  clean: 'Annoyingly respectable. You have made this roast considerably harder.',
 };
 
-export function roast(report) {
+// Which roast applies; the website translates by this id.
+export function roastId(report) {
   const missing = new Set(report.suggestions.map(c => c.id));
   const id = ['readme', 'ci', 'security', 'license', 'tests', 'contributing', 'installation', 'usage', 'releases', 'demo', 'dependencies'].find(key => missing.has(key));
-  if (id) return ROASTS[id];
-  if (report.coverage < 100) return 'The lab results are incomplete. Even a roast needs evidence.';
-  return report.suggestions.length ? 'Only minor paperwork left. It is hard to roast a repo that flosses.' : 'Annoyingly respectable. You have made this roast considerably harder.';
+  if (id) return id;
+  if (report.coverage < 100) return 'partial';
+  return report.suggestions.length ? 'minor' : 'clean';
+}
+
+export function roast(report) {
+  return ROASTS[roastId(report)];
 }
 
 export function badgeColor(score) {

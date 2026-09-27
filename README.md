@@ -1,5 +1,7 @@
 # 🩺 Repo Doctor
 
+**English** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
+
 [![CI](https://github.com/shianjeng/repo-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/shianjeng/repo-doctor/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/shianjeng/repo-doctor/actions/workflows/codeql.yml/badge.svg)](https://github.com/shianjeng/repo-doctor/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -10,15 +12,20 @@ Paste a GitHub repository URL. Get a 30-second open-source health check.
 
 **[Try the live demo →](https://repo-doctor.hank-vermilion.workers.dev)**
 
+[![Repo Doctor home page](docs/images/hero-en.png)](https://repo-doctor.hank-vermilion.workers.dev)
+
 Twenty transparent checks. Five vital signs. A practical prescription with one-click fixes. An optional, gentle roast. **No AI key. No runtime dependencies.**
 
 - **One-click fixes** — each finding links to the exact GitHub page that fixes it, with starter files (SECURITY.md, CONTRIBUTING.md, CI workflow, dependabot.yml, …) prefilled for review.
 - **Shareable reports** — `?repo=owner/repo` links open a fresh check; export Markdown or JSON.
 - **README badge** — show your score, linked back to a live check.
 - **Track fixes** — turn the prescription into a GitHub issue task list in one click.
+- **English, 简体中文, 日本語** — the website follows your browser language; switch any time.
 - **CI mode** — fail a pipeline below a minimum score.
 
-> Typical checks take a few seconds. Network conditions, large repositories, and GitHub API limits affect timing. Requests share a 25-second timeout.
+![A Repo Doctor report for shianjeng/FX-Pulses](docs/images/report-en.png)
+
+![The prescription: prioritized fixes with links to GitHub](docs/images/prescription-en.png)
 
 ## Quick start / Installation
 
@@ -43,18 +50,7 @@ The package is **not yet published to npm**. These commands run the source you d
 
 Live result for `shianjeng/FX-Pulses`, checked **2026-09-27 UTC** with v0.2.0 rules:
 
-```text
-╭─────────────────────────────────────╮
-│ Repo Doctor 🩺                      │
-├─────────────────────────────────────┤
-│ Score                        64/100 │
-│ Documentation               100/100 │
-│ Community                    40/100 │
-│ CI/CD                        80/100 │
-│ Security                      0/100 │
-│ Structure                   100/100 │
-╰─────────────────────────────────────╯
-```
+![Repo Doctor CLI output for shianjeng/FX-Pulses](docs/images/cli.svg)
 
 Top suggestions: add a security policy, contribution guide, dependency update configuration, security automation, and a published release. This is a recorded check, not a hard-coded application result. The security category measures visible hygiene signals; a zero does **not** establish that a repository is insecure.
 
@@ -76,29 +72,38 @@ Any of these inputs work: `owner/repo`, `https://github.com/owner/repo`, a page 
 
 The terminal report prints a GitHub link under each suggested fix.
 
-Optional `GITHUB_TOKEN` enables authenticated requests and private repositories in the CLI. Set it through your shell environment or CI secret manager; never commit it. It needs read access to the repository data being checked. Some community metadata may be unavailable for private repositories and will be marked unknown.
+Optional `GITHUB_TOKEN` enables authenticated requests (5,000 per hour instead of 60) and private repositories in the CLI. Set it through your shell environment or CI secret manager; never commit it. It needs read access to the repository data being checked. Some community metadata may be unavailable for private repositories and will be marked unknown.
 
 Exit codes: **0** completed / threshold met; **1** below the requested threshold; **2** invalid input, API failure, or incomplete data when enforcing a threshold. JSON output stays machine-readable; errors go to stderr.
 
-### Website / demo
+### Website
 
 ```bash
 npm start
 ```
 
-Open `http://127.0.0.1:4173`. The website supports public repositories and calls GitHub directly from the browser. It includes a score breakdown, expandable evidence, one-click fixes, Doctor/Roast modes, shareable `?repo=` links, a README badge, a GitHub issue export, Markdown/JSON export, and your five most recent checks (stored only in your browser). It sends no repository data to an application server. Fonts may be loaded from Google Fonts with local fallbacks.
+Open `http://127.0.0.1:4173`. The website supports public repositories. It includes a score breakdown, expandable evidence, one-click fixes, Doctor/Roast modes, shareable `?repo=` links, a README badge, a GitHub issue export, Markdown/JSON export, English/Chinese/Japanese, and your five most recent checks (stored only in your browser). Fonts may be loaded from Google Fonts with local fallbacks.
 
-Unauthenticated browser requests share GitHub’s limit of 60 API requests per hour per IP address, which is about ten checks; the page shows how many remain.
+**How checks reach GitHub.** The page first asks the site’s own server (`/api/check`), which checks with the site’s `GITHUB_TOKEN` (5,000 requests per hour, shared) and caches each repository’s result for ten minutes. If the server has no token, the page calls GitHub directly from the visitor’s browser, where GitHub allows 60 requests per hour per IP address — about ten checks. The server only checks public repositories, even if its token could read private ones.
+
+`npm start` runs the same server code: start it with `GITHUB_TOKEN=… npm start` to test server checks locally.
 
 ### Deploy
 
-The static `dist/` directory can be hosted on any static host; no build is required. The live demo runs on Cloudflare Workers static assets, configured by `wrangler.jsonc`:
+The live demo runs on Cloudflare Workers, configured by `wrangler.jsonc`. Files in `dist/` are served as static assets; `worker/index.js` only handles `/api/check`.
 
 ```bash
 npx wrangler deploy
 ```
 
-With Workers Builds connected to this repository, every push to `main` redeploys. `dist/_headers` sets a strict Content-Security-Policy (scripts from this origin only; network access to `api.github.com` only) plus other security headers; `npm start` applies the same headers locally.
+With Workers Builds connected to this repository, set the **Deploy command** to `npx wrangler deploy`; every push to `main` then redeploys.
+
+To enable server checks (recommended — it removes the per-visitor limit):
+
+1. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with **Repository access → Public repositories** and no extra permissions. It can only read public data.
+2. In Cloudflare, open the Worker → **Settings → Variables and Secrets → Add**, choose type **Secret**, name it `GITHUB_TOKEN`, paste the token, and deploy. Or run `npx wrangler secret put GITHUB_TOKEN`.
+
+`dist/_headers` sets a strict Content-Security-Policy (scripts from this origin only; network access to this origin and `api.github.com` only) plus other security headers; `npm start` applies the same headers locally.
 
 ## Scoring
 
@@ -124,7 +129,7 @@ Unknown data is excluded from the denominator; scoring coverage is always shown.
 - Latest release means a published non-draft, non-prerelease GitHub release. Tags alone do not count.
 - GitHub creates a `good first issue` label in every new repository, so the check passes only when at least one issue (open or closed) uses it.
 - A repository website (the About → Website field) counts as a live demo.
-- Browser requests are unauthenticated and subject to GitHub rate limits. One check normally makes six API requests. API failures are reported rather than replaced with invented data.
+- One check makes six GitHub API requests. API failures are reported rather than replaced with invented data.
 - The scanner reads the default branch; repositories may change during collection. It is not an atomic commit snapshot.
 
 GitHub API references: [repository contents](https://docs.github.com/en/rest/repos/contents), [Git trees](https://docs.github.com/en/rest/git/trees), [rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api).
@@ -142,14 +147,19 @@ bin/repo-doctor.js       CLI, output formats, exit codes
 dist/lib/doctor.js       Shared GitHub client, scoring engine, fix links, exports
 dist/lib/templates.js    Starter files offered as one-click fixes
 dist/index.html          Web interface
-dist/app.js              UI state and report rendering
+dist/app.js              UI state, server/browser checks, report rendering
+dist/i18n.js             English, Chinese, and Japanese interface text
 dist/style.css           Responsive visual design
 dist/_headers            Security headers for Cloudflare
-scripts/serve.js         Local static server (same headers)
+worker/index.js          /api/check on Cloudflare Workers (token, cache, public-only)
+scripts/serve.js         Local server (same headers and /api/check)
 wrangler.jsonc           Cloudflare Workers deployment
+docs/images/             README screenshots
 test/doctor.test.js      Offline regression tests
 .github/workflows/       Node CI and CodeQL
 ```
+
+To add a language, add a block to `UI` and `REPORT` in `dist/i18n.js` and an entry to `LANGUAGES`; the tests fail if a string is left untranslated.
 
 The optional WebMCP `check_repository` tool uses the same scanning action as the interface and is feature-detected. It is skipped by browsers without support.
 
@@ -160,9 +170,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - [x] Create the GitHub repository and push this source.
 - [x] Run CI and CodeQL on GitHub Actions.
 - [x] Deploy the website (Cloudflare Workers).
+- [x] Add screenshots to the README.
+- [x] Tag `v0.2.0` and publish a GitHub release.
+- [ ] Add the `GITHUB_TOKEN` secret to the Worker for server checks.
 - [ ] Enable private vulnerability reporting (Settings → Code security).
 - [ ] Set the repository website and topics (About → ⚙).
 - [ ] Open a first issue labeled `good first issue`.
-- [ ] Record a short GIF from a real check and add it above Quick start.
-- [ ] Tag `v0.2.0` and publish a GitHub release.
 - [ ] Review package name availability and publish to npm when ready.
