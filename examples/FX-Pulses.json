@@ -1,0 +1,284 @@
+{
+  "version": "0.1.0",
+  "repository": "shianjeng/FX-Pulses",
+  "url": "https://github.com/shianjeng/FX-Pulses",
+  "description": "Privacy-friendly, login-free Chrome & Edge extension for exchange rates: market quotes, central-bank reference rates for 30+ currencies, trend charts, a watchlist and in-page conversion. Works out of the box — data refreshes every 4 hours on GitHub Pages, no server or API key needed.",
+  "language": "JavaScript",
+  "stars": 0,
+  "checkedAt": "2026-09-27T17:59:09.749Z",
+  "score": 66,
+  "coverage": 100,
+  "earned": 66,
+  "health": "Needs attention",
+  "categories": [
+    {
+      "name": "Documentation",
+      "score": 100
+    },
+    {
+      "name": "Community",
+      "score": 50
+    },
+    {
+      "name": "CI/CD",
+      "score": 80
+    },
+    {
+      "name": "Security",
+      "score": 0
+    },
+    {
+      "name": "Structure",
+      "score": 100
+    }
+  ],
+  "checks": [
+    {
+      "id": "readme",
+      "category": "Documentation",
+      "title": "README",
+      "weight": 10,
+      "status": "pass",
+      "evidence": "GitHub returned a non-empty README.",
+      "fix": "Write a README explaining what the project does, who it is for, and how to get started."
+    },
+    {
+      "id": "installation",
+      "category": "Documentation",
+      "title": "Installation instructions",
+      "weight": 5,
+      "status": "pass",
+      "evidence": "README scanned for installation or quick-start instructions.",
+      "fix": "Add an Installation or Quick start section with a tested, copyable command."
+    },
+    {
+      "id": "usage",
+      "category": "Documentation",
+      "title": "Usage examples",
+      "weight": 5,
+      "status": "pass",
+      "evidence": "README scanned for a usage or examples heading.",
+      "fix": "Show a minimal input/output example under a Usage heading."
+    },
+    {
+      "id": "demo",
+      "category": "Documentation",
+      "title": "Demo or visual preview",
+      "weight": 3,
+      "status": "pass",
+      "evidence": "README scanned for a non-badge image, video, or labeled demo link.",
+      "fix": "Add a screenshot, demo GIF, or live demo link above installation."
+    },
+    {
+      "id": "badge",
+      "category": "Documentation",
+      "title": "CI status badge",
+      "weight": 2,
+      "status": "pass",
+      "evidence": "README scanned for a recognized CI badge URL.",
+      "fix": "Add a CI status badge linked to the workflow results."
+    },
+    {
+      "id": "license",
+      "category": "Community",
+      "title": "License",
+      "weight": 8,
+      "status": "pass",
+      "evidence": "GitHub identified MIT.",
+      "fix": "Choose an appropriate open-source license and add its full text in LICENSE."
+    },
+    {
+      "id": "contributing",
+      "category": "Community",
+      "title": "Contributing guide",
+      "weight": 5,
+      "status": "warn",
+      "evidence": "Checked repository and GitHub community-profile contributing files.",
+      "fix": "Add CONTRIBUTING.md with setup, checks, and the pull request process."
+    },
+    {
+      "id": "conduct",
+      "category": "Community",
+      "title": "Code of conduct",
+      "weight": 2,
+      "status": "warn",
+      "evidence": "Checked repository and GitHub community-profile conduct files.",
+      "fix": "Add a CODE_OF_CONDUCT.md and a working private reporting channel."
+    },
+    {
+      "id": "templates",
+      "category": "Community",
+      "title": "Issue templates",
+      "weight": 3,
+      "status": "warn",
+      "evidence": "Scanned for issue templates and issue forms.",
+      "fix": "Add a bug report and feature request template in .github/ISSUE_TEMPLATE/."
+    },
+    {
+      "id": "first-issue",
+      "category": "Community",
+      "title": "Good first issue label",
+      "weight": 2,
+      "status": "pass",
+      "evidence": "Checked for the standard “good first issue” label; this does not verify labeled open issues.",
+      "fix": "Create a good first issue label and apply it to a small, well-described task."
+    },
+    {
+      "id": "ci",
+      "category": "CI/CD",
+      "title": "CI configuration",
+      "weight": 10,
+      "status": "pass",
+      "evidence": "Recognized automation configuration. Workflow execution and passing status are not verified.",
+      "fix": "Add a CI workflow that runs the project’s checks on pushes and pull requests."
+    },
+    {
+      "id": "tests",
+      "category": "CI/CD",
+      "title": "Test files",
+      "weight": 6,
+      "status": "pass",
+      "evidence": "Scanned conventional test paths and filenames; coverage and correctness are not measured.",
+      "fix": "Add a focused test for the main user journey and run it in CI."
+    },
+    {
+      "id": "releases",
+      "category": "CI/CD",
+      "title": "Published release",
+      "weight": 4,
+      "status": "warn",
+      "evidence": "No published, non-draft, non-prerelease GitHub release found.",
+      "fix": "Publish a versioned GitHub release with installation details and change notes."
+    },
+    {
+      "id": "security",
+      "category": "Security",
+      "title": "Security policy",
+      "weight": 10,
+      "status": "warn",
+      "evidence": "Scanned this repository for SECURITY.md or an equivalent conventional policy file.",
+      "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route."
+    },
+    {
+      "id": "dependencies",
+      "category": "Security",
+      "title": "Dependency update configuration",
+      "weight": 5,
+      "status": "warn",
+      "evidence": "Scanned for Dependabot or Renovate configuration. Organization settings are not visible here.",
+      "fix": "Configure Dependabot or Renovate for supported dependency ecosystems."
+    },
+    {
+      "id": "security-automation",
+      "category": "Security",
+      "title": "Security workflow signal",
+      "weight": 5,
+      "status": "warn",
+      "evidence": "Workflow filenames are a heuristic. Default setup and organization-level scanners may not be visible.",
+      "fix": "Add a suitable security scanner, or verify your existing GitHub default setup manually."
+    },
+    {
+      "id": "manifest",
+      "category": "Structure",
+      "title": "Project manifest",
+      "weight": 6,
+      "status": "pass",
+      "evidence": "Scanned for recognized package or build manifests.",
+      "fix": "Add a standard package/build manifest, or document how this repository is organized."
+    },
+    {
+      "id": "lockfile",
+      "category": "Structure",
+      "title": "Dependency lockfile",
+      "weight": 4,
+      "status": "pass",
+      "evidence": "Scanned recognized lockfiles. Some libraries intentionally omit them.",
+      "fix": "Commit a dependency lockfile when appropriate for your ecosystem and distribution model."
+    },
+    {
+      "id": "layout",
+      "category": "Structure",
+      "title": "Organized source or docs",
+      "weight": 3,
+      "status": "pass",
+      "evidence": "Scanned conventional source, documentation, and example directories.",
+      "fix": "Group source, documentation, or examples in a clearly named directory."
+    },
+    {
+      "id": "editor",
+      "category": "Structure",
+      "title": "Formatting configuration",
+      "weight": 2,
+      "status": "pass",
+      "evidence": "Scanned conventional formatting/lint configuration filenames.",
+      "fix": "Add an .editorconfig or an ecosystem-specific formatter configuration."
+    }
+  ],
+  "notes": [],
+  "suggestions": [
+    {
+      "id": "security",
+      "category": "Security",
+      "title": "Security policy",
+      "weight": 10,
+      "status": "warn",
+      "evidence": "Scanned this repository for SECURITY.md or an equivalent conventional policy file.",
+      "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route."
+    },
+    {
+      "id": "contributing",
+      "category": "Community",
+      "title": "Contributing guide",
+      "weight": 5,
+      "status": "warn",
+      "evidence": "Checked repository and GitHub community-profile contributing files.",
+      "fix": "Add CONTRIBUTING.md with setup, checks, and the pull request process."
+    },
+    {
+      "id": "dependencies",
+      "category": "Security",
+      "title": "Dependency update configuration",
+      "weight": 5,
+      "status": "warn",
+      "evidence": "Scanned for Dependabot or Renovate configuration. Organization settings are not visible here.",
+      "fix": "Configure Dependabot or Renovate for supported dependency ecosystems."
+    },
+    {
+      "id": "security-automation",
+      "category": "Security",
+      "title": "Security workflow signal",
+      "weight": 5,
+      "status": "warn",
+      "evidence": "Workflow filenames are a heuristic. Default setup and organization-level scanners may not be visible.",
+      "fix": "Add a suitable security scanner, or verify your existing GitHub default setup manually."
+    },
+    {
+      "id": "releases",
+      "category": "CI/CD",
+      "title": "Published release",
+      "weight": 4,
+      "status": "warn",
+      "evidence": "No published, non-draft, non-prerelease GitHub release found.",
+      "fix": "Publish a versioned GitHub release with installation details and change notes."
+    },
+    {
+      "id": "templates",
+      "category": "Community",
+      "title": "Issue templates",
+      "weight": 3,
+      "status": "warn",
+      "evidence": "Scanned for issue templates and issue forms.",
+      "fix": "Add a bug report and feature request template in .github/ISSUE_TEMPLATE/."
+    },
+    {
+      "id": "conduct",
+      "category": "Community",
+      "title": "Code of conduct",
+      "weight": 2,
+      "status": "warn",
+      "evidence": "Checked repository and GitHub community-profile conduct files.",
+      "fix": "Add a CODE_OF_CONDUCT.md and a working private reporting channel."
+    }
+  ],
+  "disclaimer": "Repository hygiene signals, not a security audit or code-quality guarantee. File detection is heuristic; CI results and test coverage are not verified."
+}

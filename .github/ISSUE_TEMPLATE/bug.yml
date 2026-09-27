@@ -1,0 +1,20 @@
+name: Bug report
+description: Report a broken check or incorrect result
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include expected behavior, a public repository URL, and the relevant check. Never include tokens or private repository data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Node version or browser

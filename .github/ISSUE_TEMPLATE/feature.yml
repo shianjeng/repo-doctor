@@ -1,0 +1,10 @@
+name: Feature request
+description: Suggest a new signal or improve an existing one
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What problem would this solve?
+      description: Include examples, expected evidence, and likely false positives.
+    validations:
+      required: true

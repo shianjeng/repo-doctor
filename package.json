@@ -1,0 +1,12 @@
+{
+  "name": "@shianjeng/repo-doctor",
+  "version": "0.1.0",
+  "description": "Paste a GitHub repository URL. Get a 30-second open-source health check.",
+  "type": "module",
+  "bin": { "repo-doctor": "bin/repo-doctor.js" },
+  "exports": "./dist/lib/doctor.js",
+  "files": ["bin", "dist/lib", "README.md", "LICENSE"],
+  "scripts": { "start": "node scripts/serve.js", "test": "node --test", "check": "node scripts/check.js" },
+  "engines": { "node": ">=22" },
+  "license": "MIT"
+}
