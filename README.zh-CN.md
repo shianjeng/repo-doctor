@@ -19,7 +19,8 @@
 - **一键修复**：每个问题都链接到 GitHub 上对应的修复页面。SECURITY.md、CONTRIBUTING.md、CI 工作流、dependabot.yml 等会预先填好模板，由你检查后提交。
 - **可分享的报告**：打开 `?repo=owner/repo` 链接即可查看最新检查结果，也可导出 Markdown 或 JSON。
 - **README 徽章**：在 README 中展示分数，点击徽章即可查看最新结果。
-- **跟踪修复**：一键把处方变成带勾选框的 GitHub Issue。
+- **跟踪修复**：一键把处方变成带勾选框的 GitHub Issue；修复后点 **重新检查**，即可看到分数变化和新通过的项目。
+- **GitHub Action**：在每次工作流运行时自动体检，报告显示在任务摘要（job summary）中。
 - **English、简体中文、日本語**：网站会跟随浏览器语言，也可以随时切换。
 - **CI 模式**：分数低于设定值时，让 CI 流水线失败。
 
@@ -46,7 +47,7 @@ repo-doctor shianjeng/FX-Pulses
 
 ## 真实示例
 
-`shianjeng/FX-Pulses` 的实际检查结果（**2026-09-27 UTC**，v0.2.0 规则）：
+`shianjeng/FX-Pulses` 的实际检查结果（**2026-09-29 UTC**，v0.4.0 规则）：
 
 ![shianjeng/FX-Pulses 的 CLI 输出](docs/images/cli.svg)
 
@@ -63,6 +64,7 @@ repo-doctor owner/repo --roast
 repo-doctor owner/repo --badge      # 生成 README 徽章的 Markdown
 repo-doctor owner/repo --issue      # 生成把修复建议变成 GitHub Issue 的链接
 repo-doctor owner/repo --min-score 80
+repo-doctor owner/repo --no-color   # 不带颜色的输出（也可以设置 NO_COLOR=1）
 repo-doctor --help
 ```
 
@@ -74,13 +76,44 @@ repo-doctor --help
 
 退出码：**0** 完成或达到阈值；**1** 低于设定的最低分；**2** 输入错误、API 失败，或在设置阈值时数据不完整。JSON 输出保持机器可读，错误信息输出到 stderr。
 
+### GitHub Action
+
+在任意工作流中运行体检。报告会显示在这次运行的**任务摘要**中；设置了 `min-score` 时，分数低于该值会让这一步失败。
+
+```yaml
+name: Repo health
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'   # 每周一
+permissions:
+  contents: read
+  issues: read
+jobs:
+  checkup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shianjeng/repo-doctor@v0.4.0
+        with:
+          min-score: 80   # 可选
+```
+
+| 输入 | 默认值 | 说明 |
+| --- | --- | --- |
+| `repository` | 当前仓库 | Token 能读取的任意 `owner/repo`。 |
+| `min-score` | 空（只报告） | 分数低于该值，或有检查项无法验证时，让这一步失败。 |
+| `token` | `github.token` | 请求 GitHub API 使用的 Token。 |
+
+输出：`score`、`health`、`coverage` 和 `suggestions`（修复建议数量），例如 `${{ steps.<id>.outputs.score }}`。这个 Action 没有依赖，使用 Runner 自带的 Node.js 运行，不会改变任务中的 Node 版本。本仓库在 [repo-health.yml](.github/workflows/repo-health.yml) 中对自己运行它。
+
 ### 网站
 
 ```bash
 npm start
 ```
 
-打开 `http://127.0.0.1:4173`。网站支持公开仓库，包括分数明细、可展开的依据、一键修复、医生 / 吐槽两种语气、`?repo=` 分享链接、README 徽章、GitHub Issue 导出、Markdown / JSON 导出、中英日三种语言，以及最近 5 次检查记录（只保存在你的浏览器中）。
+打开 `http://127.0.0.1:4173`。网站支持公开仓库，包括分数明细、可展开的依据、一键修复、医生 / 吐槽两种语气、`?repo=` 分享链接、README 徽章、GitHub Issue 导出、Markdown / JSON 导出、中英日三种语言，以及最近 5 次检查记录（只保存在你的浏览器中）。修复之后点 **重新检查**，会获取最新结果，并显示分数变化以及新通过、新出现问题的项目。
 
 **检查请求是怎么发到 GitHub 的？** 页面会先请求本站服务器（`/api/check`），服务器用本站的 `GITHUB_TOKEN` 检查（所有访客共享每小时 5,000 次），同一仓库的结果缓存 10 分钟。如果服务器没有配置 Token，页面会改为从访客的浏览器直接请求 GitHub，GitHub 对每个 IP 每小时只允许 60 次请求，大约能检查 10 次。即使服务器的 Token 能读取私有仓库，服务器也只检查公开仓库。
 
@@ -127,7 +160,9 @@ npx wrangler deploy
 - 最新 Release 指已发布的正式版本（非草稿、非预发布），只有标签不算。
 - GitHub 会在每个新仓库自动创建 `good first issue` 标签，所以至少要有一个 Issue（开启或关闭均可）使用了这个标签才算通过。
 - 仓库网站（About → Website）视为在线演示。
-- 每次检查发送 6 个 GitHub API 请求。API 失败时会如实报告，不会编造数据。
+- 所有者公开的 `.github` 仓库中的 SECURITY.md、CONTRIBUTING.md、CODE_OF_CONDUCT.md 和 Issue 模板也算数，因为 GitHub 会把它们用于没有自己文件的仓库。只有在本地缺少这些文件时，才会多发 1 个请求去查找。
+- 有用法、示例、功能、指南或文档章节，有两个及以上代码示例，或有文档链接，“使用示例” 即可通过。
+- 每次检查发送 6 个 GitHub API 请求（本地缺少社区文件时为 7 个）。API 失败时会如实报告，不会编造数据。
 - 检查读取的是默认分支。检查过程中仓库可能发生变化，因此结果不是某个提交的精确快照。
 
 ## 开发
@@ -142,6 +177,7 @@ npm pack --dry-run
 bin/repo-doctor.js       CLI、输出格式、退出码
 dist/lib/doctor.js       GitHub 请求、评分规则、修复链接、导出（网页与 CLI 共用）
 dist/lib/templates.js    一键修复用的模板文件
+action.yml、action/      GitHub Action（使用 Runner 自带的 Node.js，没有依赖）
 dist/index.html          网页界面
 dist/app.js              界面状态、服务器 / 浏览器检查、报告渲染
 dist/i18n.js             英文、中文、日文界面文本

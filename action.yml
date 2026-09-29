@@ -1,0 +1,28 @@
+name: Repo Doctor checkup
+description: Open-source health check for a GitHub repository, with the full report in the job summary.
+author: shianjeng
+branding:
+  icon: activity
+  color: green
+inputs:
+  repository:
+    description: Repository to check, as owner/repo. Defaults to the repository running the workflow.
+    default: ${{ github.repository }}
+  min-score:
+    description: Fail the step when the score is below this number (0–100), or when some signals could not be verified. Leave empty to only report.
+    default: ''
+  token:
+    description: GitHub token used for API requests. The default workflow token is enough for public repositories and the current repository.
+    default: ${{ github.token }}
+outputs:
+  score:
+    description: Health score from 0 to 100 (empty if nothing could be verified).
+  health:
+    description: Healthy, Needs attention, Needs care, or Partial check.
+  coverage:
+    description: Scoring weight that could be verified, out of 100.
+  suggestions:
+    description: Number of suggested fixes.
+runs:
+  using: node24
+  main: action/index.js

@@ -19,7 +19,8 @@
 - **ワンクリック修正**：各項目から、修正用の GitHub ページに直接移動できます。SECURITY.md、CONTRIBUTING.md、CI ワークフロー、dependabot.yml などはテンプレートが入力済みで、確認してから保存できます。
 - **共有できるレポート**：`?repo=owner/repo` のリンクを開くと最新の診断が表示されます。Markdown や JSON でも出力できます。
 - **README バッジ**：README にスコアを表示し、クリックすると最新の診断結果が開きます。
-- **対応の管理**：処方箋をワンクリックでチェックリスト付きの GitHub Issue にできます。
+- **対応の管理**：処方箋をワンクリックでチェックリスト付きの GitHub Issue にできます。修正後に **再診断** すると、スコアの変化と新たに合格した項目が表示されます。
+- **GitHub Action**：ワークフローを実行するたびに診断し、レポートをジョブのサマリーに表示します。
 - **English・简体中文・日本語**：ブラウザの言語に合わせて表示し、いつでも切り替えられます。
 - **CI モード**：スコアが基準を下回るとパイプラインを失敗させます。
 
@@ -46,7 +47,7 @@ repo-doctor shianjeng/FX-Pulses
 
 ## 実際の例
 
-`shianjeng/FX-Pulses` の実際の診断結果（**2026-09-27 UTC**、v0.2.0 のルール）：
+`shianjeng/FX-Pulses` の実際の診断結果（**2026-09-29 UTC**、v0.4.0 のルール）：
 
 ![shianjeng/FX-Pulses の CLI 出力](docs/images/cli.svg)
 
@@ -63,6 +64,7 @@ repo-doctor owner/repo --roast
 repo-doctor owner/repo --badge      # README 用バッジの Markdown
 repo-doctor owner/repo --issue      # 修正項目を GitHub Issue にするリンク
 repo-doctor owner/repo --min-score 80
+repo-doctor owner/repo --no-color   # 色なしで出力（NO_COLOR=1 でも可）
 repo-doctor --help
 ```
 
@@ -74,13 +76,44 @@ repo-doctor --help
 
 終了コード：**0** 完了または基準を満たした、**1** 基準のスコアを下回った、**2** 入力エラー・API エラー、または基準を指定したときにデータが不完全だった。JSON 出力は機械可読のままで、エラーは stderr に出力します。
 
+### GitHub Action
+
+どのワークフローでも診断を実行できます。レポートは実行結果の**ジョブサマリー**に表示され、`min-score` を指定するとスコアがそれを下回ったときにステップが失敗します。
+
+```yaml
+name: Repo health
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'   # 毎週月曜日
+permissions:
+  contents: read
+  issues: read
+jobs:
+  checkup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shianjeng/repo-doctor@v0.4.0
+        with:
+          min-score: 80   # 任意
+```
+
+| 入力 | デフォルト | 説明 |
+| --- | --- | --- |
+| `repository` | 実行中のリポジトリ | トークンで読める任意の `owner/repo`。 |
+| `min-score` | 空（レポートのみ） | スコアがこれを下回ったとき、または確認できない項目があったときに失敗します。 |
+| `token` | `github.token` | GitHub API へのリクエストに使うトークン。 |
+
+出力は `score`、`health`、`coverage`、`suggestions`（修正の提案の数）で、`${{ steps.<id>.outputs.score }}` のように使えます。依存関係はなく、ランナーに同梱の Node.js で動くため、ジョブの Node のバージョンは変わりません。このリポジトリでも [repo-health.yml](.github/workflows/repo-health.yml) で自分自身を診断しています。
+
 ### ウェブサイト
 
 ```bash
 npm start
 ```
 
-`http://127.0.0.1:4173` を開きます。公開リポジトリに対応し、スコアの内訳、根拠の表示、ワンクリック修正、ドクター / 辛口モード、`?repo=` 共有リンク、README バッジ、GitHub Issue 出力、Markdown / JSON 出力、英中日の 3 言語、最近 5 件の履歴（ブラウザ内にのみ保存）を備えています。
+`http://127.0.0.1:4173` を開きます。公開リポジトリに対応し、スコアの内訳、根拠の表示、ワンクリック修正、ドクター / 辛口モード、`?repo=` 共有リンク、README バッジ、GitHub Issue 出力、Markdown / JSON 出力、英中日の 3 言語、最近 5 件の履歴（ブラウザ内にのみ保存）を備えています。修正後に **再診断** を押すと最新の結果を取得し、スコアの変化と、新たに合格・要対応になった項目を表示します。
 
 **GitHub への問い合わせ方法。** ページはまずサイト自身のサーバー（`/api/check`）に問い合わせます。サーバーはサイトの `GITHUB_TOKEN`（全訪問者で共有、1 時間 5,000 回）で診断し、同じリポジトリの結果を 10 分間キャッシュします。サーバーにトークンがない場合は、訪問者のブラウザから GitHub に直接問い合わせます。この場合、GitHub の上限は IP アドレスごとに 1 時間 60 回（約 10 回の診断）です。トークンが非公開リポジトリを読めても、サーバーは公開リポジトリしか診断しません。
 
@@ -127,7 +160,9 @@ npx wrangler deploy
 - 最新リリースは、公開済みの正式リリース（下書き・プレリリース以外）を指します。タグだけでは合格しません。
 - GitHub はすべての新しいリポジトリに `good first issue` ラベルを自動で作成するため、実際に Issue（オープン・クローズ問わず）で使われている場合のみ合格です。
 - リポジトリのウェブサイト（About → Website）はライブデモとして扱います。
-- 1 回の診断で GitHub API を 6 回呼び出します。API エラーはそのまま報告し、データを作り出すことはありません。
+- オーナーの公開 `.github` リポジトリにある SECURITY.md、CONTRIBUTING.md、CODE_OF_CONDUCT.md、Issue テンプレートも合格として扱います。独自のファイルがないリポジトリには GitHub がそれを適用するためです。確認のためのリクエストは、ファイルが見つからないときだけ 1 回追加されます。
+- 使い方・例・機能・ガイド・ドキュメントの見出し、2 つ以上のコード例、またはドキュメントへのリンクがあれば「使用例」は合格です。
+- 1 回の診断で GitHub API を 6 回呼び出します（コミュニティ関連のファイルがない場合は 7 回）。API エラーはそのまま報告し、データを作り出すことはありません。
 - 診断はデフォルトブランチを読み取ります。診断中にリポジトリが変わることもあり、特定のコミットの厳密なスナップショットではありません。
 
 ## 開発
@@ -142,6 +177,7 @@ npm pack --dry-run
 bin/repo-doctor.js       CLI、出力形式、終了コード
 dist/lib/doctor.js       GitHub への問い合わせ、採点ルール、修正リンク、出力（Web と CLI で共通）
 dist/lib/templates.js    ワンクリック修正用のテンプレート
+action.yml、action/      GitHub Action（ランナーの Node.js で動作、依存関係なし）
 dist/index.html          ウェブ画面
 dist/app.js              画面の状態、サーバー / ブラウザでの診断、レポート表示
 dist/i18n.js             英語・中国語・日本語の画面テキスト

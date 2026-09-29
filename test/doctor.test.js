@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRepo, analyzeRepository, evaluateRepository, toMarkdown, roast, badgeMarkdown, toIssue, VERSION } from '../dist/lib/doctor.js';
+import { parseRepo, analyzeRepository, evaluateRepository, toMarkdown, roast, badgeMarkdown, toIssue, compareReports, englishView, VERSION } from '../dist/lib/doctor.js';
 import { ciWorkflow, dependabot } from '../dist/lib/templates.js';
 import { main } from '../bin/repo-doctor.js';
 import { mkdtemp, symlink, rm } from 'node:fs/promises';
@@ -93,9 +93,11 @@ test('HTTP collection uses GitHub only, sends token, and preserves branch names 
     return new Response('', { status: 404 });
   };
   const report = await analyzeRepository('o/r', { fetchImpl, token: 'test-token' });
-  assert.equal(calls.length, 6);
+  // Six requests, plus the owner's .github repository because this repository has no community files.
+  assert.equal(calls.length, 7);
   assert.ok(calls.some(c => c.url.includes('/issues?labels=good%20first%20issue')));
-  assert.ok(calls.every(c => c.url.startsWith('https://api.github.com/repos/o/r') && c.options.headers.Authorization === 'Bearer test-token'));
+  assert.ok(calls.some(c => c.url === 'https://api.github.com/repos/o/.github/git/trees/HEAD?recursive=1'));
+  assert.ok(calls.every(c => /^https:\/\/api\.github\.com\/repos\/o\/(?:r|\.github)[/?]?/.test(c.url) && c.options.headers.Authorization === 'Bearer test-token'));
   assert.ok(calls.some(c => c.url.includes('release%2Fv1')));
   assert.equal(report.checks.find(c => c.id === 'releases').status, 'warn');
   assert.equal(report.coverage, 100);
@@ -308,4 +310,168 @@ test('every UI string has Chinese and Japanese text', async () => {
   assert.ok(keys.length > 80);
   const same = new Set(['action.markdown', 'action.json']);
   for (const lang of ['zh', 'ja']) for (const key of keys) if (!same.has(key)) assert.notEqual(t(lang, key), t('en', key), `${lang} ${key}`);
+});
+
+test('community files inherited from the owner’s .github repository count, and a failed lookup is unknown', () => {
+  const data = fixture(allPaths.filter(p => !['SECURITY.md', 'CONTRIBUTING.md', 'CODE_OF_CONDUCT.md', '.github/ISSUE_TEMPLATE/bug.yml'].includes(p)));
+  data.sources.inherited = ok({ tree: ['SECURITY.md', 'CONTRIBUTING.md', 'profile/README.md', '.github/ISSUE_TEMPLATE/bug.yml'].map(path => ({ path, type: 'blob' })) });
+  const report = evaluateRepository(data);
+  const byId = id => report.checks.find(c => c.id === id);
+  assert.equal(byId('security').status, 'pass');
+  assert.match(byId('security').evidence, /^Inherited from octocat\/.github: SECURITY\.md\./);
+  assert.equal(byId('contributing').status, 'pass');
+  assert.equal(byId('templates').status, 'pass');
+  assert.equal(byId('conduct').status, 'warn');
+  data.sources.inherited = { ok: false, error: 'GitHub API rate limit reached.' };
+  const failed = evaluateRepository(data);
+  assert.equal(failed.checks.find(c => c.id === 'security').status, 'unknown');
+  assert.equal(failed.health, 'Partial check');
+});
+
+test('the owner’s .github repository is only requested when a community file is missing', async () => {
+  const run = async paths => {
+    const calls = [];
+    await analyzeRepository('o/r', { fetchImpl: async url => {
+      calls.push(url);
+      if (url.endsWith('/o/r')) return Response.json({ full_name: 'o/r', default_branch: 'main' });
+      if (url.includes('/o/r/git/trees/')) return Response.json({ tree: paths.map(path => ({ path, type: 'blob' })), truncated: false });
+      if (url.endsWith('/community/profile')) return Response.json({ files: {} });
+      return new Response('', { status: 404 });
+    } });
+    return calls.filter(url => url.includes('/o/.github/')).length;
+  };
+  assert.equal(await run(['SECURITY.md', 'CONTRIBUTING.md', 'CODE_OF_CONDUCT.md', '.github/ISSUE_TEMPLATE/bug.yml']), 0);
+  assert.equal(await run(['README.md']), 1);
+});
+
+test('secondary rate limits (Retry-After) are reported as rate limits', async () => {
+  const before = Date.now();
+  await assert.rejects(analyzeRepository('o/r', { fetchImpl: async () => new Response('', { status: 403, headers: { 'retry-after': '60', 'x-ratelimit-remaining': '4000' } }) }),
+    error => error.code === 'rate_limit' && Date.parse(error.resetAt) >= before + 59000);
+});
+
+test('grouped top-level directories count as an organized layout', () => {
+  const report = evaluateRepository(fixture(['cli/main.rs', 'runtime/lib.rs', 'README.md']));
+  assert.equal(report.checks.find(c => c.id === 'layout').status, 'pass');
+  assert.equal(evaluateRepository(fixture(['main.py', 'README.md'])).checks.find(c => c.id === 'layout').status, 'warn');
+});
+
+test('compareReports lists score change, newly passing, and newly failing checks', () => {
+  const report = evaluateRepository(fixture(allPaths.filter(p => p !== 'SECURITY.md')));
+  const passedBefore = report.checks.filter(c => c.status === 'pass' && c.id !== 'license').map(c => c.id).concat('security');
+  const diff = compareReports({ score: 70, passed: passedBefore, checkedAt: '2026-09-01T00:00:00.000Z' }, report);
+  assert.equal(diff.delta, 20);
+  assert.deepEqual(diff.fixed, ['license']);
+  assert.deepEqual(diff.regressed, ['security']);
+  assert.equal(compareReports(null, report), null);
+  assert.deepEqual(compareReports({ score: 90 }, report), { since: null, delta: 0, fixed: [], regressed: [] });
+});
+
+test('exports accept a translated view', () => {
+  const report = evaluateRepository(fixture([]));
+  const view = { ...englishView(report), text: { ...englishView(report).text, fixes: 'Fixes-X', issueMany: '{n} items-X' }, check: c => ({ title: `T-${c.id}`, fix: `F-${c.id}`, evidence: 'E', actionLabel: 'A' }) };
+  const md = toMarkdown(report, view);
+  assert.match(md, /## Fixes-X/); assert.match(md, /\*\*T-security\*\*/); assert.match(md, /F-security \[A\]\(https:\/\/github\.com\//);
+  const issue = toIssue(report, view);
+  assert.match(issue.title, /^\d+ items-X$/); assert.match(issue.body, /- \[ \] \*\*T-security\*\* — F-security/);
+});
+
+test('README detection accepts Setext/HTML headings, install links, code examples, and documentation links', () => {
+  const status = (readme, id) => { const data = fixture([]); data.sources.readme.value = readme; return evaluateRepository(data).checks.find(c => c.id === id).status; };
+  assert.equal(status('Proj\n\nInstallation\n============\n', 'installation'), 'pass');
+  assert.equal(status('<h2 align="center">Getting Started</h2>', 'installation'), 'pass');
+  assert.equal(status('See [Install Flutter](https://docs.flutter.dev/get-started/install).', 'installation'), 'pass');
+  assert.equal(status('Read docs/intro/install.txt for instructions on installing Django.', 'installation'), 'pass');
+  assert.equal(status('# Flask\n\nA lightweight web framework.\n\nSome intro\n---\n', 'installation'), 'warn');
+  assert.equal(status('## Features\n- fast', 'usage'), 'pass');
+  assert.equal(status('```\na\n```\n\n```\nb\n```', 'usage'), 'pass');
+  assert.equal(status('All documentation is in the "docs" directory and online at\nhttps://docs.example.org/.', 'usage'), 'pass');
+  assert.equal(status('Read the `user guide <https://example.org/guide>`_.', 'usage'), 'pass');
+  assert.equal(status('```\npip install x\n```', 'usage'), 'warn');
+});
+
+test('server re-checks skip the cache at most once a minute per repository', async () => {
+  const { handleCheck } = await import('../worker/index.js');
+  const store = new Map();
+  const cache = { match: async key => store.get(key.url)?.clone(), put: async (key, response) => { store.set(key.url, response); } };
+  let checks = 0; let clock = Date.parse('2026-09-30T00:00:00Z');
+  const analyze = async () => { checks++; return { ...evaluateRepository(fixture(allPaths)), checkedAt: new Date(clock).toISOString() }; };
+  const request = async query => { const pending = []; const response = await handleCheck(new URL(`https://doctor.example/api/check?${query}`), { GITHUB_TOKEN: 't' }, { analyze, cache, now: () => clock, waitUntil: p => pending.push(p), log: { error() {}, warn() {} } }); await Promise.all(pending); return response; };
+  await request('repo=o/r');
+  await request('repo=o/r&fresh=1');
+  assert.equal(checks, 1, 'a fresh request within a minute of the cached check reuses it');
+  clock += 61_000;
+  await request('repo=o/r');
+  assert.equal(checks, 1, 'without fresh=1 the cache is used');
+  const fresh = await request('repo=o/r&fresh=1');
+  assert.equal(checks, 2);
+  assert.equal(fresh.headers.get('X-Checked-At'), new Date(clock).toISOString());
+});
+
+test('server logs an expired or revoked token', async () => {
+  const { handleCheck } = await import('../worker/index.js');
+  const logged = [];
+  const response = await handleCheck(new URL('https://doctor.example/api/check?repo=o/r'), { GITHUB_TOKEN: 't' }, {
+    analyze: async () => { throw Object.assign(new Error('GitHub rejected the token.'), { code: 'bad_token' }); }, log: { error: m => logged.push(m), warn: m => logged.push(m) },
+  });
+  assert.equal(response.status, 502);
+  assert.match(logged[0], /GITHUB_TOKEN/);
+});
+
+test('GitHub Action writes the summary and outputs, and enforces min-score', async () => {
+  const { run } = await import('../action/index.js');
+  const act = async (inputs, report = evaluateRepository(fixture(allPaths.filter(p => p !== 'SECURITY.md')))) => {
+    const files = {}; const lines = []; let options;
+    const code = await run({
+      env: { GITHUB_REPOSITORY: 'octocat/hello-world', GITHUB_STEP_SUMMARY: 'summary', GITHUB_OUTPUT: 'output', ...inputs },
+      analyze: async (repo, opts) => { options = { repo, ...opts }; return report; },
+      log: line => lines.push(line), append: async (file, text) => { files[file] = (files[file] || '') + text; },
+    });
+    return { code, files, lines, options };
+  };
+  const ok = await act({ 'INPUT_TOKEN': 'workflow-token' });
+  assert.equal(ok.code, 0);
+  assert.deepEqual(ok.options, { repo: 'octocat/hello-world', token: 'workflow-token' });
+  assert.match(ok.files.summary, /^# Repo Doctor — octocat\/hello-world/);
+  assert.match(ok.files.output, /^score=90\nhealth=Healthy\ncoverage=100\nsuggestions=1\n$/);
+  assert.match(ok.lines[0], /^::notice title=Repo Doctor::octocat\/hello-world scored 90\/100 \(Healthy\)\. 1 suggested fix;/);
+  const low = await act({ 'INPUT_MIN-SCORE': '95' });
+  assert.equal(low.code, 1); assert.match(low.lines.at(-1), /^::error title=Repo Doctor::Score 90\/100 is below the minimum of 95/);
+  const partial = evaluateRepository(fixture(allPaths)); partial.coverage = 90;
+  assert.equal((await act({ 'INPUT_MIN-SCORE': '10' }, partial)).code, 1);
+  const bad = await act({ 'INPUT_MIN-SCORE': 'high' });
+  assert.equal(bad.code, 1); assert.match(bad.lines[0], /min-score must be a number/);
+  assert.equal((await act({ 'INPUT_REPOSITORY': 'other/repo' })).options.repo, 'other/repo');
+});
+
+test('terminal colors only when enabled, and never from repository text', async () => {
+  const { toTerminal } = await import('../bin/repo-doctor.js');
+  const report = evaluateRepository(fixture([]));
+  report.notes.push('evil \u001b[31m note');
+  assert.ok(!toTerminal(report).includes('\u001b'));
+  const colored = toTerminal(report, false, true);
+  assert.match(colored, /\u001b\[33m⚠ /);
+  assert.ok(!colored.includes('\u001b[31m note'));
+  let out = '';
+  await main(['o/r'], { analyze: async () => report, stdout: { write: t => out += t, isTTY: true }, stderr: { write() {} }, env: {} });
+  assert.ok(out.includes('\u001b['));
+  out = '';
+  await main(['o/r', '--no-color'], { analyze: async () => report, stdout: { write: t => out += t, isTTY: true }, stderr: { write() {} }, env: {} });
+  assert.ok(!out.includes('\u001b'));
+});
+
+test('translations cover inherited files and translated exports', async () => {
+  const { localizeReport } = await import('../dist/i18n.js');
+  const data = fixture(allPaths.filter(p => p !== 'SECURITY.md'));
+  data.sources.inherited = ok({ tree: [{ path: 'SECURITY.md', type: 'blob' }] });
+  const report = evaluateRepository(data);
+  const security = report.checks.find(c => c.id === 'security');
+  assert.match(localizeReport('zh', report).check(security).evidence, /^继承自 octocat\/.github\/SECURITY\.md/);
+  assert.match(localizeReport('ja', report).check(security).evidence, /^octocat\/.github\/SECURITY\.md から継承/);
+  const failed = fixture([]); failed.sources.inherited = { ok: false, error: 'GitHub API rate limit reached. It resets at 2030-01-01T00:00:00.000Z.' };
+  assert.match(localizeReport('zh', evaluateRepository(failed)).notes.find(n => n.includes('.github')), /^所有者的 \.github 仓库 请求失败：已达到 GitHub 每小时请求上限/);
+  const md = toMarkdown(report, localizeReport('ja', report));
+  assert.match(md, /## 診断項目/); assert.match(md, /\*\*セキュリティポリシー\*\*/);
+  const issue = toIssue(evaluateRepository(fixture([])), localizeReport('zh', evaluateRepository(fixture([]))));
+  assert.match(issue.title, /^Repo Doctor 建议了 \d+ 项仓库改进$/);
 });

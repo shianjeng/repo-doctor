@@ -19,7 +19,8 @@ Twenty transparent checks. Five vital signs. A practical prescription with one-c
 - **One-click fixes** — each finding links to the exact GitHub page that fixes it, with starter files (SECURITY.md, CONTRIBUTING.md, CI workflow, dependabot.yml, …) prefilled for review.
 - **Shareable reports** — `?repo=owner/repo` links open a fresh check; export Markdown or JSON.
 - **README badge** — show your score, linked back to a live check.
-- **Track fixes** — turn the prescription into a GitHub issue task list in one click.
+- **Track fixes** — turn the prescription into a GitHub issue task list in one click, then **check again** to see the score change and what now passes.
+- **GitHub Action** — a checkup in every workflow run, with the report in the job summary.
 - **English, 简体中文, 日本語** — the website follows your browser language; switch any time.
 - **CI mode** — fail a pipeline below a minimum score.
 
@@ -48,7 +49,7 @@ The package is **not yet published to npm**. These commands run the source you d
 
 ## Real example
 
-Live result for `shianjeng/FX-Pulses`, checked **2026-09-27 UTC** with v0.2.0 rules:
+Live result for `shianjeng/FX-Pulses`, checked **2026-09-29 UTC** with v0.4.0 rules:
 
 ![Repo Doctor CLI output for shianjeng/FX-Pulses](docs/images/cli.svg)
 
@@ -65,6 +66,7 @@ repo-doctor owner/repo --roast
 repo-doctor owner/repo --badge      # Markdown badge for your README
 repo-doctor owner/repo --issue      # link that opens the fixes as a GitHub issue
 repo-doctor owner/repo --min-score 80
+repo-doctor owner/repo --no-color   # plain output (NO_COLOR=1 works too)
 repo-doctor --help
 ```
 
@@ -76,13 +78,44 @@ Optional `GITHUB_TOKEN` enables authenticated requests (5,000 per hour instead o
 
 Exit codes: **0** completed / threshold met; **1** below the requested threshold; **2** invalid input, API failure, or incomplete data when enforcing a threshold. JSON output stays machine-readable; errors go to stderr.
 
+### GitHub Action
+
+Run a checkup in any workflow. The report appears in the run’s **job summary**; with `min-score`, the step fails when the score drops below it.
+
+```yaml
+name: Repo health
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'   # every Monday
+permissions:
+  contents: read
+  issues: read
+jobs:
+  checkup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shianjeng/repo-doctor@v0.4.0
+        with:
+          min-score: 80   # optional
+```
+
+| Input | Default | |
+| --- | --- | --- |
+| `repository` | the current repository | Any `owner/repo` the token can read. |
+| `min-score` | empty (report only) | Fail below this score, or when some signals could not be verified. |
+| `token` | `github.token` | Token used for GitHub API requests. |
+
+Outputs: `score`, `health`, `coverage`, and `suggestions` (number of fixes), for example `${{ steps.<id>.outputs.score }}`. The action has no dependencies and runs on the runner’s bundled Node.js, so it does not change the job’s Node version. This repository runs it on itself in [repo-health.yml](.github/workflows/repo-health.yml).
+
 ### Website
 
 ```bash
 npm start
 ```
 
-Open `http://127.0.0.1:4173`. The website supports public repositories. It includes a score breakdown, expandable evidence, one-click fixes, Doctor/Roast modes, shareable `?repo=` links, a README badge, a GitHub issue export, Markdown/JSON export, English/Chinese/Japanese, and your five most recent checks (stored only in your browser). Fonts may be loaded from Google Fonts with local fallbacks.
+Open `http://127.0.0.1:4173`. The website supports public repositories. It includes a score breakdown, expandable evidence, one-click fixes, Doctor/Roast modes, shareable `?repo=` links, a README badge, a GitHub issue export, Markdown/JSON export, English/Chinese/Japanese, and your five most recent checks (stored only in your browser). After a fix, **Check again** fetches fresh results and shows the score change and which checks newly pass or fail. Fonts may be loaded from Google Fonts with local fallbacks.
 
 **How checks reach GitHub.** The page first asks the site’s own server (`/api/check`), which checks with the site’s `GITHUB_TOKEN` (5,000 requests per hour, shared) and caches each repository’s result for ten minutes. If the server has no token, the page calls GitHub directly from the visitor’s browser, where GitHub allows 60 requests per hour per IP address — about ten checks. The server only checks public repositories, even if its token could read private ones.
 
@@ -129,7 +162,9 @@ Unknown data is excluded from the denominator; scoring coverage is always shown.
 - Latest release means a published non-draft, non-prerelease GitHub release. Tags alone do not count.
 - GitHub creates a `good first issue` label in every new repository, so the check passes only when at least one issue (open or closed) uses it.
 - A repository website (the About → Website field) counts as a live demo.
-- One check makes six GitHub API requests. API failures are reported rather than replaced with invented data.
+- SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, and issue templates in the owner’s public `.github` repository count, because GitHub applies them to repositories without their own. Checking them costs one extra request, only when a file is missing.
+- Usage passes with a usage, example, features, guide, or documentation section, two or more code examples, or a link to documentation.
+- One check makes six GitHub API requests (seven when community files are missing locally). API failures are reported rather than replaced with invented data.
 - The scanner reads the default branch; repositories may change during collection. It is not an atomic commit snapshot.
 
 GitHub API references: [repository contents](https://docs.github.com/en/rest/repos/contents), [Git trees](https://docs.github.com/en/rest/git/trees), [rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api).
@@ -146,6 +181,7 @@ npm pack --dry-run
 bin/repo-doctor.js       CLI, output formats, exit codes
 dist/lib/doctor.js       Shared GitHub client, scoring engine, fix links, exports
 dist/lib/templates.js    Starter files offered as one-click fixes
+action.yml, action/      GitHub Action (runs on the runner’s Node.js, no dependencies)
 dist/index.html          Web interface
 dist/app.js              UI state, server/browser checks, report rendering
 dist/i18n.js             English, Chinese, and Japanese interface text
@@ -172,6 +208,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - [x] Deploy the website (Cloudflare Workers).
 - [x] Add screenshots to the README.
 - [x] Tag `v0.2.0` and publish a GitHub release.
+- [ ] Tag `v0.4.0` and publish a release so `uses: shianjeng/repo-doctor@v0.4.0` works.
 - [ ] Add the `GITHUB_TOKEN` secret to the Worker for server checks.
 - [ ] Enable private vulnerability reporting (Settings → Code security).
 - [ ] Set the repository website and topics (About → ⚙).

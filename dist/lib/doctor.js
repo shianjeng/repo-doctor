@@ -1,10 +1,27 @@
 import * as templates from './templates.js';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';
 export const CATEGORIES = ['Documentation', 'Community', 'CI/CD', 'Security', 'Structure'];
 export const PROJECT_URL = 'https://github.com/shianjeng/repo-doctor';
 
 const NAME = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})\/[a-zA-Z0-9_.-]{1,100}$/;
+
+// Community health files GitHub also applies from the owner's public `.github` repository
+// when a repository has none of its own.
+const INHERITABLE = {
+  security: /^(?:\.github\/|docs\/)?security(?:\.[^/]+)?$/i,
+  contributing: /^(?:\.github\/|docs\/)?contributing(?:\.[^/]+)?$/i,
+  conduct: /^(?:\.github\/|docs\/)?code_of_conduct(?:\.[^/]+)?$/i,
+  templates: /^(?:\.github\/issue_template\/[^/]+\.(?:md|ya?ml)|(?:\.github\/|docs\/)?issue_template\.md)$/i,
+};
+
+// Markdown (# Title), Setext (Title followed by === or ---) and HTML (<h2>Title</h2>) headings.
+const heading = words => new RegExp(`(?:^|\\n)[ \\t]*#{1,6}[ \\t]+[^\\n]*(?:${words})|(?:^|\\n)[^\\n]*(?:${words})[^\\n]*\\n[ \\t]*(?:=+|-+)[ \\t]*(?:\\n|$)|<h[1-6][^>]*>[^<]*(?:${words})`, 'i');
+const INSTALL_HEADING = heading('install|getting started|get started|quick\\s*start|set\\s*up|build|download|安装|安裝|快速开始|快速上手|セットアップ|インストール|導入');
+const INSTALL_TEXT = /(?:npm|pnpm|yarn|bun|pip3?|pipx|uv|poetry|cargo|brew|gem|go|composer|dotnet|conda|winget|scoop|apt(?:-get)?)\s+(?:install|add|get|require|i)\b|git clone|docker (?:run|compose|pull)|npx\s+\S|\[[^\]]*(?:install|download|get started|getting started|quick\s*start)[^\]]*\]\(|\]\([^)]*(?:install|getting-started|get-started|quick-?start)[^)]*\)|(?:instructions?|guide)\s+(?:on|for|to)\s+install|how to install/i;
+const USAGE_HEADING = heading('usage|example|how to|tutorial|demo|getting started|get started|quick\\s*start|guide|your first|first steps|features|documentation|使用|用法|示例|例子|文档|使い方|使用例|ドキュメント');
+// Markdown links, reStructuredText links (`text <url>`_), and plain "documentation … https://" mentions.
+const USAGE_LINK = /\[[^\]]*(?:docs|documentation|guide|tutorial|usage|example|manual|文档|ドキュメント)[^\]]*\]\(|`[^`<]*(?:docs|documentation|guide|tutorial|usage|example)[^`<]*<https?:|\b(?:documentation|docs)\b[\s\S]{0,100}?https?:\/\//i;
 
 // Accepts owner/repo, any github.com page inside a repository (tree, blob, issues, ?tab=…),
 // scheme-less github.com/owner/repo, and SSH clone URLs. Only the owner/repo pair is kept.
@@ -43,10 +60,10 @@ export async function collectRepository(input, { token, fetchImpl = fetch, timeo
   const headers = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
   if (token) headers.Authorization = `Bearer ${token}`;
   let rateLimit = null;
-  async function request(path, { text = false, absent = [] } = {}) {
+  async function request(path, { text = false, absent = [], repo = name } = {}) {
     let response;
     try {
-      response = await fetchImpl(`https://api.github.com/repos/${name}${path}`, {
+      response = await fetchImpl(`https://api.github.com/repos/${repo}${path}`, {
         headers: text ? { ...headers, Accept: 'application/vnd.github.raw+json' } : headers, signal,
       });
     } catch {
@@ -65,9 +82,11 @@ export async function collectRepository(input, { token, fetchImpl = fetch, timeo
       const status = response.status;
       if (status === 404) throw new GitHubError('Repository not found or not accessible. Check its spelling; the website supports public repositories.', status, { code: 'not_found' });
       if (status === 401) throw new GitHubError('GitHub rejected the token. Check GITHUB_TOKEN.', status, { code: 'bad_token' });
-      if (status === 429 || (status === 403 && response.headers.get('x-ratelimit-remaining') === '0')) {
+      // Primary limits report remaining=0; secondary limits send Retry-After instead.
+      const retryAfter = Number(response.headers.get('retry-after'));
+      if (status === 429 || (status === 403 && (response.headers.get('x-ratelimit-remaining') === '0' || retryAfter > 0))) {
         const reset = Number(response.headers.get('x-ratelimit-reset'));
-        const resetAt = reset ? new Date(reset * 1000).toISOString() : null;
+        const resetAt = retryAfter > 0 ? new Date(Date.now() + retryAfter * 1000).toISOString() : reset ? new Date(reset * 1000).toISOString() : null;
         throw new GitHubError(`GitHub API rate limit reached.${resetAt ? ` It resets at ${resetAt}.` : ' Try again later.'}`, status, { code: 'rate_limit', resetAt });
       }
       if (status === 403) throw new GitHubError('GitHub denied this request. Check access permissions or try again later.', status, { code: 'denied' });
@@ -88,11 +107,18 @@ export async function collectRepository(input, { token, fetchImpl = fetch, timeo
     // GitHub creates the label by default, so look for issues that actually use it. 410: issues disabled.
     firstIssues: () => request('/issues?labels=good%20first%20issue&state=all&per_page=1', { absent: [404, 410] }),
   };
-  const results = await Promise.all(Object.entries(tasks).map(async ([key, fn]) => {
-    try { return [key, { ok: true, value: await fn() }]; }
-    catch (error) { return [key, { ok: false, error: error.message }]; }
-  }));
-  return { repo, sources: Object.fromEntries(results), checkedAt: new Date().toISOString(), rateLimit };
+  const settle = async fn => {
+    try { return { ok: true, value: await fn() }; }
+    catch (error) { return { ok: false, error: error.message }; }
+  };
+  const sources = Object.fromEntries(await Promise.all(Object.entries(tasks).map(async ([key, fn]) => [key, await settle(fn)])));
+  // Only when a community file is missing here: one extra request to the owner's `.github` repository.
+  const localFiles = sources.tree.ok ? (sources.tree.value?.tree || []).filter(f => f.type === 'blob').map(f => f.path) : [];
+  const [owner, repoName] = name.split('/');
+  if (sources.tree.ok && repoName.toLowerCase() !== '.github' && Object.values(INHERITABLE).some(pattern => !localFiles.some(p => pattern.test(p)))) {
+    sources.inherited = await settle(() => request('/git/trees/HEAD?recursive=1', { repo: `${owner}/.github`, absent: [404, 409] }));
+  }
+  return { repo, sources, checkedAt: new Date().toISOString(), rateLimit };
 }
 
 const path = value => value.split('/').map(encodeURIComponent).join('/');
@@ -122,7 +148,16 @@ export function evaluateRepository({ repo, sources, checkedAt, rateLimit = null 
     const local = fileSignal(pattern);
     return local === true ? true : community.ok ? local : null;
   };
-  const rootDoc = name => new RegExp(`^(?:\\.github/|docs/)?${name}(?:\\.[^/]+)?$`, 'i');
+  const owner = repo.full_name.split('/')[0];
+  const inherited = sources.inherited;
+  const inheritedFiles = inherited?.ok ? (inherited.value?.tree || []).filter(f => f.type === 'blob').map(f => f.path) : [];
+  // A local signal wins; otherwise a file in the owner's .github repository counts. If that lookup failed, the result is unknown.
+  const withInherited = (id, local) => {
+    if (local === true) return [true, null];
+    const found = inheritedFiles.find(p => INHERITABLE[id].test(p));
+    if (found) return [true, `Inherited from ${owner}/.github: ${found}. GitHub applies it to repositories without their own.`];
+    return [inherited && !inherited.ok && local === false ? null : local, null];
+  };
   const readmePath = locate(/^readme(?:\.[^/]+)?$/i) || locate(/^(?:\.github|docs)\/readme(?:\.[^/]+)?$/i);
   const editReadme = readmePath ? { label: 'Edit README on GitHub', url: `${base}/edit/${path(branch)}/${path(readmePath)}` } : null;
   const add = (id, category, title, weight, signal, evidence, fix, action = null) => checks.push({
@@ -136,10 +171,12 @@ export function evaluateRepository({ repo, sources, checkedAt, rateLimit = null 
     'Write a README explaining what the project does, who it is for, and how to get started.',
     { label: 'Create README.md on GitHub', ...newFile(base, branch, 'README.md', templates.README(repo.full_name)) });
   add('installation', 'Documentation', 'Installation instructions', 5,
-    doc(/(?:^|\n)\s*#{1,6}\s+.*(?:install|getting started|quick\s*start|setup|build|安装|安裝|快速开始|セットアップ|インストール)|(?:(?:npm|pnpm|yarn|bun|pip3?|pipx|uv|poetry|cargo|brew|gem|go|composer|dotnet|conda|apt(?:-get)?)\s+(?:install|add|get|require|i)\b|git clone|docker (?:run|compose|pull)|npx\s+\S)/im),
-    'README scanned for installation or quick-start instructions.', 'Add an Installation or Quick start section with a tested, copyable command.', editReadme);
-  add('usage', 'Documentation', 'Usage examples', 5, doc(/(?:^|\n)\s*#{1,6}\s+.*(?:usage|example|how to|tutorial|demo|使用|用法|示例|例子|使い方)/im),
-    'README scanned for a usage or examples heading.', 'Show a minimal input/output example under a Usage heading.', editReadme);
+    readme.ok ? INSTALL_HEADING.test(text) || INSTALL_TEXT.test(text) : null,
+    'README scanned for installation or quick-start instructions, commands, and links.', 'Add an Installation or Quick start section with a tested, copyable command.', editReadme);
+  // Two or more code blocks or a link to documentation also show people how to use the project.
+  const codeBlocks = (text.match(/(?:^|\n)[ \t]*(?:```|~~~)/g) || []).length / 2;
+  add('usage', 'Documentation', 'Usage examples', 5, readme.ok ? USAGE_HEADING.test(text) || USAGE_LINK.test(text) || codeBlocks >= 2 : null,
+    'README scanned for a usage, example, or documentation section, code examples, and documentation links.', 'Show a minimal input/output example under a Usage heading.', editReadme);
   const demoInReadme = doc(/!\[[^\]]*\]\((?![^)]*(?:shields\.io|badge|actions\/workflows))[^)]+\)|<(?:video|img)\b[^>]*\bsrc\s*=\s*["'](?![^"']*(?:shields\.io|badge|actions\/workflows))|\[(?:[^\]]*(?:demo|playground|preview|live|try it)[^\]]*)\]\(https?:\/\//i);
   const homepage = /^https?:\/\//i.test(repo.homepage || '') ? repo.homepage : '';
   add('demo', 'Documentation', 'Demo or visual preview', 3, homepage ? true : demoInReadme,
@@ -158,14 +195,17 @@ export function evaluateRepository({ repo, sources, checkedAt, rateLimit = null 
     spdx ? `GitHub identified ${spdx}.` : 'Checked GitHub metadata and conventional license files; file presence does not establish legal validity.',
     'Choose an appropriate open-source license and add its full text in LICENSE.',
     { label: 'Choose a license on GitHub', url: `${base}/community/license/new?branch=${encodeURIComponent(branch)}` });
-  add('contributing', 'Community', 'Contributing guide', 5, communityFile('contributing', rootDoc('contributing')),
-    'Checked repository and GitHub community-profile contributing files.', 'Add CONTRIBUTING.md with setup, checks, and the pull request process.',
+  const [contributing, contributingFrom] = withInherited('contributing', communityFile('contributing', INHERITABLE.contributing));
+  add('contributing', 'Community', 'Contributing guide', 5, contributing,
+    contributingFrom || 'Checked repository and GitHub community-profile contributing files.', 'Add CONTRIBUTING.md with setup, checks, and the pull request process.',
     { label: 'Create CONTRIBUTING.md on GitHub', ...newFile(base, branch, 'CONTRIBUTING.md', templates.CONTRIBUTING(repo.full_name)) });
-  add('conduct', 'Community', 'Code of conduct', 2, communityFile('code_of_conduct', rootDoc('code_of_conduct')),
-    'Checked repository and GitHub community-profile conduct files.', 'Add a CODE_OF_CONDUCT.md and a working private reporting channel.',
+  const [conduct, conductFrom] = withInherited('conduct', communityFile('code_of_conduct', INHERITABLE.conduct));
+  add('conduct', 'Community', 'Code of conduct', 2, conduct,
+    conductFrom || 'Checked repository and GitHub community-profile conduct files.', 'Add a CODE_OF_CONDUCT.md and a working private reporting channel.',
     { label: 'Add a code of conduct on GitHub', url: `${base}/community/code-of-conduct/new?branch=${encodeURIComponent(branch)}` });
-  add('templates', 'Community', 'Issue templates', 3, communityFiles?.issue_template ? true : fileSignal(/^(?:\.github\/issue_template\/[^/]+\.(?:md|ya?ml)|(?:\.github\/|docs\/)?issue_template\.md)$/i),
-    'Scanned for issue templates and issue forms.', 'Add a bug report and feature request template in .github/ISSUE_TEMPLATE/.',
+  const [templatesFound, templatesFrom] = withInherited('templates', communityFiles?.issue_template ? true : fileSignal(INHERITABLE.templates));
+  add('templates', 'Community', 'Issue templates', 3, templatesFound,
+    templatesFrom || 'Scanned for issue templates and issue forms.', 'Add a bug report and feature request template in .github/ISSUE_TEMPLATE/.',
     { label: 'Set up issue templates on GitHub', url: `${base}/issues/templates/edit` });
   const firstIssues = sources.firstIssues;
   add('first-issue', 'Community', 'Good first issues', 2, repo.has_issues === false ? false : firstIssues.ok ? Array.isArray(firstIssues.value) && firstIssues.value.length > 0 : null,
@@ -185,8 +225,9 @@ export function evaluateRepository({ repo, sources, checkedAt, rateLimit = null 
     'Publish a versioned GitHub release with installation details and change notes.',
     { label: 'Draft a release on GitHub', url: `${base}/releases/new` });
 
-  add('security', 'Security', 'Security policy', 10, fileSignal(rootDoc('security')),
-    'Scanned this repository for SECURITY.md or an equivalent conventional policy file.', 'Add SECURITY.md with supported versions and a private vulnerability reporting route.',
+  const [security, securityFrom] = withInherited('security', fileSignal(INHERITABLE.security));
+  add('security', 'Security', 'Security policy', 10, security,
+    securityFrom || 'Scanned this repository and its owner’s .github repository for SECURITY.md or an equivalent policy file.', 'Add SECURITY.md with supported versions and a private vulnerability reporting route.',
     { label: 'Create SECURITY.md on GitHub', ...newFile(base, branch, 'SECURITY.md', templates.SECURITY(repo.full_name)) });
   add('dependencies', 'Security', 'Dependency update configuration', 5, fileSignal(/^(?:\.github\/dependabot\.ya?ml|(?:\.github\/|\.gitlab\/)?renovate(?:\.json5?)?|\.renovaterc(?:\.json5?)?)$/i),
     'Scanned for Dependabot or Renovate configuration. Organization settings are not visible here.', 'Configure Dependabot or Renovate for supported dependency ecosystems.',
@@ -201,8 +242,10 @@ export function evaluateRepository({ repo, sources, checkedAt, rateLimit = null 
   add('lockfile', 'Structure', 'Dependency lockfile', 4, lockApplicable === false ? true : fileSignal(/(?:^|\/)(?:package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|deno\.lock|Cargo\.lock|poetry\.lock|uv\.lock|pdm\.lock|Pipfile\.lock|Gemfile\.lock|composer\.lock|pubspec\.lock|mix\.lock|requirements[^/]*\.txt)$/i),
     lockApplicable === false ? 'Not required by the ecosystems detected; no penalty applied.' : 'Scanned recognized lockfiles and pinned requirement files. Some libraries intentionally omit them.',
     'Commit a dependency lockfile when appropriate for your ecosystem and distribution model.');
-  add('layout', 'Structure', 'Organized source or docs', 3, fileSignal(/^(?:src|app|lib|pkg|cmd|internal|docs|examples|packages|crates|bin|source|include)\/.+/i),
-    'Scanned conventional source, documentation, and example directories.', 'Group source, documentation, or examples in a clearly named directory.');
+  // A conventional directory, or at least two top-level directories, shows files are grouped.
+  const topDirs = new Set(files.filter(p => p.includes('/') && !p.startsWith('.')).map(p => p.split('/')[0]));
+  add('layout', 'Structure', 'Organized source or docs', 3, topDirs.size >= 2 ? true : fileSignal(/^(?:src|app|lib|pkg|cmd|internal|docs|examples|packages|crates|bin|source|include)\/.+/i),
+    'Scanned for conventional source, documentation, and example directories, or files grouped into several top-level directories.', 'Group source, documentation, or examples in a clearly named directory.');
   add('editor', 'Structure', 'Formatting configuration', 2, fileSignal(/(?:^|\/)(?:\.editorconfig|\.prettierrc(?:\.[^/]+)?|prettier\.config\.[^/]+|biome\.jsonc?|\.rustfmt\.toml|rustfmt\.toml|ruff\.toml|\.clang-format|\.eslintrc(?:\.[^/]+)?|eslint\.config\.[^/]+|\.golangci\.ya?ml|\.rubocop\.yml|\.swiftformat|\.swiftlint\.yml|\.pre-commit-config\.yaml)$/i),
     'Scanned conventional formatting/lint configuration filenames.', 'Add an .editorconfig or an ecosystem-specific formatter configuration.',
     { label: 'Create .editorconfig on GitHub', ...newFile(base, branch, '.editorconfig', templates.EDITORCONFIG) });
@@ -278,15 +321,55 @@ export function badgeMarkdown(report, link = PROJECT_URL) {
   return `[![Repo Doctor](https://img.shields.io/badge/repo%20doctor-${message}-${badgeColor(report.score)})](${link})`;
 }
 
+// Report text for exports. The website passes a translated view with the same shape (see i18n.js).
+export const EXPORT_TEXT = {
+  checked: 'Checked', coverage: 'Verified scoring weight', category: 'Category', score: 'Score', unknown: 'Unknown',
+  checks: 'Checks', fixes: 'Suggested fixes', none: 'No missing signals detected.', notes: 'Notes',
+  issueOne: 'Repo health: 1 improvement suggested by Repo Doctor', issueMany: 'Repo health: {n} improvements suggested by Repo Doctor',
+  issueIntro: 'Repo Doctor scored this repository **{score}/100** ({health}) on {date}.', issueFooter: 'Generated by [Repo Doctor]({url}) v{version}.',
+};
+
+export function englishView(report) {
+  return {
+    text: EXPORT_TEXT, category: name => name, health: report.health, notes: report.notes, disclaimer: report.disclaimer,
+    check: c => ({ title: c.title, fix: c.fix, evidence: c.evidence, actionLabel: c.action?.label }),
+  };
+}
+
+const fill = (template, params) => template.replace(/\{(\w+)\}/g, (_, key) => params[key] ?? '');
+
 // A GitHub issue with the fixes as a task list, for maintainers who want to track them.
-export function toIssue(report) {
-  const title = `Repo health: ${report.suggestions.length} improvement${report.suggestions.length === 1 ? '' : 's'} suggested by Repo Doctor`;
-  const lines = report.suggestions.map(c => `- [ ] **${c.title}** — ${c.fix}${c.action ? ` ([${c.action.label}](${c.action.url}))` : ''}`);
-  const body = `Repo Doctor scored this repository **${report.score ?? '—'}/100** (${report.health}) on ${report.checkedAt.slice(0, 10)}.\n\n${lines.join('\n') || 'No missing signals detected.'}\n\n_${report.disclaimer}_\n\nGenerated by [Repo Doctor](${PROJECT_URL}) v${report.version}.`;
+export function toIssue(report, view = englishView(report)) {
+  const T = view.text;
+  const count = report.suggestions.length;
+  const title = count === 1 ? T.issueOne : fill(T.issueMany, { n: count });
+  const lines = report.suggestions.map(c => {
+    const text = view.check(c);
+    return `- [ ] **${text.title}** — ${text.fix}${c.action ? ` ([${text.actionLabel}](${c.action.url}))` : ''}`;
+  });
+  const body = `${fill(T.issueIntro, { score: report.score ?? '—', health: view.health, date: report.checkedAt.slice(0, 10) })}\n\n${lines.join('\n') || T.none}\n\n_${view.disclaimer}_\n\n${fill(T.issueFooter, { url: PROJECT_URL, version: report.version })}`;
   return { title, body, url: `${report.url}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}` };
 }
 
-export function toMarkdown(report) {
+export function toMarkdown(report, view = englishView(report)) {
+  const T = view.text;
   const safe = value => String(value ?? '').replace(/[\r\n|]/g, ' ').replace(/[<>]/g, '').replace(/([\\`*_\[\]])/g, '\\$1');
-  return `# Repo Doctor — ${safe(report.repository)}\n\n**${report.score ?? '—'}/100 · ${report.health}**\n\nChecked: ${report.checkedAt}\nVerified scoring weight: ${report.coverage}/100\n\n| Category | Score |\n| --- | --- |\n${report.categories.map(c => `| ${c.name} | ${c.score ?? 'Unknown'}/100 |`).join('\n')}\n\n## Checks\n\n${report.checks.map(c => `- ${c.status === 'pass' ? '✓' : c.status === 'warn' ? '⚠' : '?'} **${c.title}** — ${safe(c.evidence)}`).join('\n')}\n\n## Suggested fixes\n\n${report.suggestions.map((c, i) => `${i + 1}. ${c.fix}${c.action ? ` [${c.action.label}](${c.action.url})` : ''}${c.action?.snippet ? `\n\n   \`\`\`markdown\n   ${c.action.snippet}\n   \`\`\`` : ''}`).join('\n') || 'No missing signals detected.'}\n${report.notes.length ? `\n## Notes\n\n${report.notes.map(n => `- ${safe(n)}`).join('\n')}\n` : ''}\n${report.disclaimer}\n`;
+  const checks = report.checks.map(c => `- ${c.status === 'pass' ? '✓' : c.status === 'warn' ? '⚠' : '?'} **${view.check(c).title}** — ${safe(view.check(c).evidence)}`);
+  const fixes = report.suggestions.map((c, i) => {
+    const text = view.check(c);
+    return `${i + 1}. ${text.fix}${c.action ? ` [${text.actionLabel}](${c.action.url})` : ''}${c.action?.snippet ? `\n\n   \`\`\`markdown\n   ${c.action.snippet}\n   \`\`\`` : ''}`;
+  });
+  return `# Repo Doctor — ${safe(report.repository)}\n\n**${report.score ?? '—'}/100 · ${view.health}**\n\n${T.checked}: ${report.checkedAt}\n${T.coverage}: ${report.coverage}/100\n\n| ${T.category} | ${T.score} |\n| --- | --- |\n${report.categories.map(c => `| ${view.category(c.name)} | ${c.score ?? T.unknown}/100 |`).join('\n')}\n\n## ${T.checks}\n\n${checks.join('\n')}\n\n## ${T.fixes}\n\n${fixes.join('\n') || T.none}\n${view.notes.length ? `\n## ${T.notes}\n\n${view.notes.map(n => `- ${safe(n)}`).join('\n')}\n` : ''}\n${view.disclaimer}\n`;
+}
+
+// What changed since an earlier check of the same repository. `previous` is { score, passed: [check ids], checkedAt }.
+export function compareReports(previous, report) {
+  if (!previous || typeof previous.score !== 'number' || report.score === null) return null;
+  const before = Array.isArray(previous.passed) ? new Set(previous.passed) : null;
+  return {
+    since: previous.checkedAt || null,
+    delta: report.score - previous.score,
+    fixed: before ? report.checks.filter(c => c.status === 'pass' && !before.has(c.id)).map(c => c.id) : [],
+    regressed: before ? report.checks.filter(c => c.status === 'warn' && before.has(c.id)).map(c => c.id) : [],
+  };
 }

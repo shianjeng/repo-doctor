@@ -4,6 +4,8 @@
 import { analyzeRepository, parseRepo } from '../dist/lib/doctor.js';
 
 const CACHE_SECONDS = 600;
+// `fresh=1` (the page's "Check again") skips the cache, but at most once a minute per repository.
+const FRESH_AFTER_MS = 60_000;
 const API_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
   'X-Content-Type-Options': 'nosniff',
@@ -12,7 +14,7 @@ const API_HEADERS = {
 
 const json = (body, status = 200, extra = {}) => new Response(JSON.stringify(body), { status, headers: { ...API_HEADERS, ...extra } });
 
-export async function handleCheck(url, env, { analyze = analyzeRepository, cache = null, waitUntil = () => {} } = {}) {
+export async function handleCheck(url, env, { analyze = analyzeRepository, cache = null, waitUntil = () => {}, now = Date.now, log = console } = {}) {
   if (!env.GITHUB_TOKEN) return json({ error: 'Server checks are not configured.', code: 'not_configured' }, 503);
   let repository;
   try { repository = parseRepo(url.searchParams.get('repo') || ''); }
@@ -21,17 +23,23 @@ export async function handleCheck(url, env, { analyze = analyzeRepository, cache
   // One cache entry per repository, whatever form the visitor typed it in.
   const key = new Request(`https://repo-doctor.cache/api/check?repo=${encodeURIComponent(repository.toLowerCase())}`);
   const cached = cache && await cache.match(key);
-  if (cached) return cached;
+  if (cached) {
+    const age = now() - Date.parse(cached.headers.get('X-Checked-At') || 0);
+    if (url.searchParams.get('fresh') !== '1' || age < FRESH_AFTER_MS) return cached;
+  }
 
   try {
     const report = await analyze(repository, { token: env.GITHUB_TOKEN, publicOnly: true, timeout: 20000 });
     // The token's quota is shared by every visitor; it is not the visitor's own limit.
     report.rateLimit = null;
     report.checkedBy = 'server';
-    const response = json(report, 200, { 'Cache-Control': `public, max-age=60, s-maxage=${CACHE_SECONDS}` });
+    const response = json(report, 200, { 'Cache-Control': `public, max-age=60, s-maxage=${CACHE_SECONDS}`, 'X-Checked-At': report.checkedAt });
     if (cache) waitUntil(cache.put(key, response.clone()));
     return response;
   } catch (error) {
+    // Visible in Cloudflare → Workers → repo-doctor → Logs. The page falls back to browser checks meanwhile.
+    if (error.code === 'bad_token') log.error('GitHub rejected GITHUB_TOKEN (expired or revoked). Create a new token and replace the Worker secret.');
+    if (error.code === 'rate_limit') log.warn(`GITHUB_TOKEN hit GitHub's rate limit; resets at ${error.resetAt || 'an unknown time'}.`);
     const status = error.code === 'not_found' ? 404 : error.code === 'rate_limit' ? 429 : 502;
     return json({ error: error.message, code: error.code || 'upstream', resetAt: error.resetAt || null }, status);
   }

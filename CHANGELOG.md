@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 — 2026-09-30
+
+### Added
+
+- **GitHub Action.** `uses: shianjeng/repo-doctor@v0.4.0` runs a checkup in any workflow, writes the full report to the job summary, sets `score`/`health`/`coverage`/`suggestions` outputs, and can fail below a `min-score`. This repository runs it on itself (`.github/workflows/repo-health.yml`).
+- **Check again and see what changed.** A “Check again” button fetches fresh results (the server skips its cache, at most once a minute per repository), and the report shows the score change plus checks that newly pass or fail since your last check of the same repository.
+- Markdown export and the GitHub issue now follow the website language.
+- Colored terminal output when the CLI runs in a terminal; `--no-color` and `NO_COLOR` turn it off.
+- The server logs an expired or revoked `GITHUB_TOKEN` and GitHub rate limits to the Worker’s Logs tab (`observability` in `wrangler.jsonc`).
+
+### Fixed
+
+- **Inherited community files.** SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, and issue templates in the owner’s public `.github` repository now count, as they do on GitHub. Repositories such as vercel/next.js, sveltejs/svelte, fastapi/fastapi, and expressjs/express were wrongly told to add a security policy. This costs one extra request only when a file is missing.
+- **Usage and installation detection** no longer fail well-documented READMEs: Setext and HTML headings, “Features”, “Guide”, and “Documentation” sections, two or more code examples, documentation links (Markdown, reStructuredText, or plain URLs), and install links or instructions now count.
+- **Layout** accepts projects organized into several top-level directories (for example `cli/`, `runtime/`, `ext/`).
+- GitHub’s secondary rate limits (`Retry-After`) are reported as rate limits with a retry time instead of “access denied”.
+- Phones: the header no longer squeezes the logo against the language picker, the Chinese and Japanese headlines no longer strand their last characters on a third line, and the report actions sit in a tidy grid. Tablets no longer stack them in a tall column.
+
 ## 0.3.0 — 2026-09-28
 
 ### Added

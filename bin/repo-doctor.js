@@ -14,6 +14,7 @@ Usage: repo-doctor <owner/repo | GitHub URL> [options]
   --badge             Print a Markdown score badge for your README
   --issue             Print a GitHub link that opens the fixes as a task-list issue
   --min-score <0-100> Exit 1 below a minimum score (CI mode)
+  --no-color          Plain output (also NO_COLOR=1); colors are only used in a terminal
   --help, -h          Show this help
   --version, -v       Show version
 
@@ -24,7 +25,19 @@ No cloning, code execution, writes to GitHub, or AI API key required.
 `;
 
 const clean = value => String(value).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
-export function toTerminal(report, withRoast = false) {
+const ansi = (code, text) => `\x1b[${code}m${text}\x1b[0m`;
+// Colors are added after `clean`, so text from GitHub can never carry its own escape sequences.
+function paint(line, report) {
+  if (line.startsWith('✓ ')) return ansi('32', line);
+  if (line.startsWith('⚠ ')) return ansi('33', line);
+  if (line.startsWith('? ') || line.startsWith('   → ') || line.startsWith('Note: ')) return ansi('2', line);
+  if (line.startsWith('│ Score ')) return ansi(report.score === null ? '2' : report.score >= 80 ? '1;32' : report.score >= 55 ? '1;33' : '1;31', line);
+  if (line === 'Suggested fixes' || line.startsWith(`${report.repository} · `)) return ansi('1', line);
+  if (line.startsWith('Roast: ')) return ansi('35', line);
+  return line;
+}
+
+export function toTerminal(report, withRoast = false, color = false) {
   const row = (left, right = '') => `│ ${clean(left).padEnd(23)}${clean(right).padStart(12)} │`;
   const lines = [
     '╭─────────────────────────────────────╮', row('Repo Doctor 🩺'),
@@ -37,14 +50,14 @@ export function toTerminal(report, withRoast = false) {
     ...report.notes.map(n => `Note: ${n}`), '', report.disclaimer,
   ];
   if (withRoast) lines.push('', `Roast: ${roast(report)}`);
-  return lines.map(clean).join('\n') + '\n';
+  return lines.map(clean).map(line => color ? paint(line, report) : line).join('\n') + '\n';
 }
 
 export async function main(args = process.argv.slice(2), { analyze = analyzeRepository, stdout = process.stdout, stderr = process.stderr, env = process.env } = {}) {
   try {
     const { values, positionals } = parseArgs({ args, allowPositionals: true, strict: true, options: {
       json: { type: 'boolean' }, markdown: { type: 'boolean' }, roast: { type: 'boolean' },
-      badge: { type: 'boolean' }, issue: { type: 'boolean' }, 'min-score': { type: 'string' }, help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' },
+      badge: { type: 'boolean' }, issue: { type: 'boolean' }, 'min-score': { type: 'string' }, 'no-color': { type: 'boolean' }, help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' },
     } });
     if (values.help) { stdout.write(HELP); return 0; }
     if (values.version) { stdout.write(`${VERSION}\n`); return 0; }
@@ -57,7 +70,7 @@ export async function main(args = process.argv.slice(2), { analyze = analyzeRepo
       : values.markdown ? toMarkdown(report)
       : values.badge ? badgeMarkdown(report) + '\n'
       : values.issue ? toIssue(report).url + '\n'
-      : toTerminal(report, values.roast));
+      : toTerminal(report, values.roast, !values['no-color'] && !env.NO_COLOR && env.TERM !== 'dumb' && (!!stdout.isTTY || !!env.FORCE_COLOR)));
     if (!env.GITHUB_TOKEN && report.rateLimit && report.rateLimit.remaining < 12)
       stderr.write(`Repo Doctor: ${report.rateLimit.remaining} unauthenticated GitHub API requests left this hour. Set GITHUB_TOKEN for a higher limit.\n`);
     if (minimum !== undefined && report.coverage < 100) {

@@ -2,7 +2,7 @@
 
 **64/100 · Needs attention**
 
-Checked: 2026-09-27T18:30:09.507Z
+Checked: 2026-09-29T21:37:13.635Z
 Verified scoring weight: 100/100
 
 | Category | Score |
@@ -16,8 +16,8 @@ Verified scoring weight: 100/100
 ## Checks
 
 - ✓ **README** — GitHub returned a non-empty README.
-- ✓ **Installation instructions** — README scanned for installation or quick-start instructions.
-- ✓ **Usage examples** — README scanned for a usage or examples heading.
+- ✓ **Installation instructions** — README scanned for installation or quick-start instructions, commands, and links.
+- ✓ **Usage examples** — README scanned for a usage, example, or documentation section, code examples, and documentation links.
 - ✓ **Demo or visual preview** — README scanned for a non-badge image, video, or labeled demo link, and the repository website field checked.
 - ✓ **CI status badge** — README scanned for a recognized CI badge URL.
 - ✓ **License** — GitHub identified MIT.
@@ -28,12 +28,12 @@ Verified scoring weight: 100/100
 - ✓ **CI configuration** — Recognized automation configuration. Workflow execution and passing status are not verified.
 - ✓ **Test files** — Scanned conventional test paths and filenames; coverage and correctness are not measured.
 - ⚠ **Published release** — No published, non-draft, non-prerelease GitHub release found.
-- ⚠ **Security policy** — Scanned this repository for SECURITY.md or an equivalent conventional policy file.
+- ⚠ **Security policy** — Scanned this repository and its owner’s .github repository for SECURITY.md or an equivalent policy file.
 - ⚠ **Dependency update configuration** — Scanned for Dependabot or Renovate configuration. Organization settings are not visible here.
 - ⚠ **Security workflow signal** — Workflow filenames are a heuristic. Default setup and organization-level scanners may not be visible.
 - ✓ **Project manifest** — Scanned for recognized package or build manifests.
 - ✓ **Dependency lockfile** — Scanned recognized lockfiles and pinned requirement files. Some libraries intentionally omit them.
-- ✓ **Organized source or docs** — Scanned conventional source, documentation, and example directories.
+- ✓ **Organized source or docs** — Scanned for conventional source, documentation, and example directories, or files grouped into several top-level directories.
 - ✓ **Formatting configuration** — Scanned conventional formatting/lint configuration filenames.
 
 ## Suggested fixes

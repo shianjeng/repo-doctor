@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readdir, readFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
-for (const directory of ['dist', 'dist/lib', 'bin', 'scripts', 'test', 'worker']) {
+for (const directory of ['dist', 'dist/lib', 'bin', 'scripts', 'test', 'worker', 'action']) {
   for (const file of await readdir(directory)) {
     if (!file.endsWith('.js')) continue;
     const result = spawnSync(process.execPath, ['--check', join(directory, file)], { stdio: 'inherit' });

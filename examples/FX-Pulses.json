@@ -1,12 +1,12 @@
 {
-  "version": "0.2.0",
+  "version": "0.4.0",
   "repository": "shianjeng/FX-Pulses",
   "url": "https://github.com/shianjeng/FX-Pulses",
   "defaultBranch": "main",
   "description": "Privacy-friendly, login-free Chrome & Edge extension for exchange rates: market quotes, central-bank reference rates for 30+ currencies, trend charts, a watchlist and in-page conversion. Works out of the box — data refreshes every 4 hours on GitHub Pages, no server or API key needed.",
   "language": "JavaScript",
   "stars": 0,
-  "checkedAt": "2026-09-27T18:30:08.447Z",
+  "checkedAt": "2026-09-29T21:37:11.032Z",
   "score": 64,
   "coverage": 100,
   "earned": 64,
@@ -54,7 +54,7 @@
       "title": "Installation instructions",
       "weight": 5,
       "status": "pass",
-      "evidence": "README scanned for installation or quick-start instructions.",
+      "evidence": "README scanned for installation or quick-start instructions, commands, and links.",
       "fix": "Add an Installation or Quick start section with a tested, copyable command.",
       "action": {
         "label": "Edit README on GitHub",
@@ -67,7 +67,7 @@
       "title": "Usage examples",
       "weight": 5,
       "status": "pass",
-      "evidence": "README scanned for a usage or examples heading.",
+      "evidence": "README scanned for a usage, example, or documentation section, code examples, and documentation links.",
       "fix": "Show a minimal input/output example under a Usage heading.",
       "action": {
         "label": "Edit README on GitHub",
@@ -210,7 +210,7 @@
       "title": "Security policy",
       "weight": 10,
       "status": "warn",
-      "evidence": "Scanned this repository for SECURITY.md or an equivalent conventional policy file.",
+      "evidence": "Scanned this repository and its owner’s .github repository for SECURITY.md or an equivalent policy file.",
       "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route.",
       "action": {
         "label": "Create SECURITY.md on GitHub",
@@ -271,7 +271,7 @@
       "title": "Organized source or docs",
       "weight": 3,
       "status": "pass",
-      "evidence": "Scanned conventional source, documentation, and example directories.",
+      "evidence": "Scanned for conventional source, documentation, and example directories, or files grouped into several top-level directories.",
       "fix": "Group source, documentation, or examples in a clearly named directory.",
       "action": null
     },
@@ -291,11 +291,7 @@
     }
   ],
   "notes": [],
-  "rateLimit": {
-    "remaining": 4979,
-    "limit": 5000,
-    "reset": "2026-09-27T19:20:07.000Z"
-  },
+  "rateLimit": null,
   "suggestions": [
     {
       "id": "security",
@@ -303,7 +299,7 @@
       "title": "Security policy",
       "weight": 10,
       "status": "warn",
-      "evidence": "Scanned this repository for SECURITY.md or an equivalent conventional policy file.",
+      "evidence": "Scanned this repository and its owner’s .github repository for SECURITY.md or an equivalent policy file.",
       "fix": "Add SECURITY.md with supported versions and a private vulnerability reporting route.",
       "action": {
         "label": "Create SECURITY.md on GitHub",

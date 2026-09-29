@@ -1,5 +1,6 @@
 // Interface translations. The scoring engine (lib/doctor.js) stays English and is the source of
 // truth; report text is translated here by check id. Missing keys fall back to English.
+import { englishView } from './lib/doctor.js';
 
 export const LANGUAGES = { en: 'English', zh: '简体中文', ja: '日本語' };
 
@@ -46,6 +47,9 @@ const UI = {
     'coverage': '{passed} of {total} checks passed · {coverage}% scoring coverage',
     'status.pass': 'LOOKING GOOD', 'status.warn': 'NEEDS CARE', 'status.unknown': 'UNKNOWN', 'rx.label': 'Prescription:',
     'points': '{n} POINTS', 'rx.none': 'No missing signals detected. Keep your documentation and checks up to date.', 'filter.empty': 'No checks match this filter.',
+    'action.recheck': '↻ Check again',
+    'changes.since': 'Since your last check on {date}', 'changes.up': '+{n} points', 'changes.down': '−{n} points', 'changes.same': 'same score',
+    'changes.fixed': 'Now passing: {list}', 'changes.regressed': 'Newly failing: {list}', 'list.sep': ', ',
     'doc.title': '{repo}: {score}/100 · Repo Doctor',
   },
   zh: {
@@ -90,6 +94,9 @@ const UI = {
     'coverage': '通过 {passed}/{total} 项 · 评分覆盖率 {coverage}%',
     'status.pass': '良好', 'status.warn': '需要处理', 'status.unknown': '未知', 'rx.label': '处方：',
     'points': '{n} 分', 'rx.none': '没有发现缺失项。记得持续更新文档和检查配置。', 'filter.empty': '没有符合筛选条件的检查项。',
+    'action.recheck': '↻ 重新检查',
+    'changes.since': '与上次检查（{date}）相比', 'changes.up': '提高 {n} 分', 'changes.down': '下降 {n} 分', 'changes.same': '分数不变',
+    'changes.fixed': '新通过：{list}', 'changes.regressed': '新出现的问题：{list}', 'list.sep': '、',
     'doc.title': '{repo}：{score}/100 · Repo Doctor',
   },
   ja: {
@@ -134,6 +141,9 @@ const UI = {
     'coverage': '{passed}/{total} 項目合格 · 採点カバー率 {coverage}%',
     'status.pass': '良好', 'status.warn': '要対応', 'status.unknown': '不明', 'rx.label': '処方：',
     'points': '{n} 点', 'rx.none': '不足している項目はありません。ドキュメントとチェック設定を最新に保ちましょう。', 'filter.empty': '条件に合う項目はありません。',
+    'action.recheck': '↻ 再診断',
+    'changes.since': '前回の診断（{date}）から', 'changes.up': '{n} 点アップ', 'changes.down': '{n} 点ダウン', 'changes.same': 'スコアは変わらず',
+    'changes.fixed': '新たに合格：{list}', 'changes.regressed': '新たに要対応：{list}', 'list.sep': '、',
     'doc.title': '{repo}：{score}/100 · Repo Doctor',
   },
 };
@@ -173,7 +183,7 @@ const REPORT = {
     evidence: {
       unknown: '无法从现有的 GitHub 数据中确认这一项。',
       'readme.pass': 'GitHub 返回了非空的 README。', 'readme.warn': '没有找到可读取的 README。',
-      installation: '已在 README 中查找安装或快速开始的说明。', usage: '已在 README 中查找用法或示例标题。',
+      installation: '已在 README 中查找安装或快速开始的章节、安装命令和相关链接。', usage: '已在 README 中查找用法、示例或文档章节，以及代码示例和文档链接。',
       'demo.site': '仓库网站：{url}', demo: '已在 README 中查找非徽章的图片、视频或演示链接，并检查了仓库网站字段。',
       badge: '已在 README 中查找可识别的 CI 徽章地址。',
       'license.spdx': 'GitHub 识别为 {spdx}。', license: '已检查 GitHub 元数据和常见的许可证文件；文件存在不代表法律上有效。',
@@ -182,11 +192,12 @@ const REPORT = {
       'first-issue.disabled': '仓库关闭了 Issue 功能，新人无从下手。', 'first-issue': '查找了至少一个带 “good first issue” 标签的 Issue（开启或关闭均可）。GitHub 默认会创建这个标签，所以只有标签本身不算。',
       ci: '识别到了自动化配置文件，但未验证工作流是否运行或通过。', tests: '已查找常见的测试路径和文件名；未测量覆盖率和正确性。',
       'releases.tag': '最新正式版本：{tag}。', releases: '没有找到已发布的正式 GitHub Release（非草稿、非预发布）。',
-      security: '已在仓库中查找 SECURITY.md 或同类安全策略文件。', dependencies: '已查找 Dependabot 或 Renovate 配置。组织级设置在这里不可见。',
+      security: '已在仓库及其所有者的 .github 仓库中查找 SECURITY.md 或同类安全策略文件。', dependencies: '已查找 Dependabot 或 Renovate 配置。组织级设置在这里不可见。',
       'security-automation': '根据工作流文件名判断，属于启发式检查。默认设置和组织级扫描可能不可见。',
       manifest: '已查找可识别的包管理或构建清单文件。',
       'lockfile.na': '检测到的生态不需要锁文件，不扣分。', lockfile: '已查找常见的锁文件和固定版本的依赖文件。部分库会有意不提交锁文件。',
-      layout: '已查找常见的源码、文档和示例目录。', editor: '已查找常见的格式化 / Lint 配置文件。',
+      layout: '已查找常见的源码、文档和示例目录，以及文件是否分布在多个顶层目录中。', editor: '已查找常见的格式化 / Lint 配置文件。',
+      inherited: '继承自 {source}。没有自己文件的仓库，GitHub 会自动使用它。',
     },
     actions: {
       'Create README.md on GitHub': '在 GitHub 上创建 README.md', 'Edit README on GitHub': '在 GitHub 上编辑 README',
@@ -204,7 +215,13 @@ const REPORT = {
       description: 'About 简介太短或缺失。请说明项目的用途和目标用户（不计分）。', topics: '没有设置仓库 Topics。Topics 有助于别人在 GitHub 搜索中发现项目（不计分）。',
       source: '{source} 请求失败：{error}',
     },
-    sources: { tree: '文件树', readme: 'README', community: '社区资料', release: 'Release', firstIssues: 'good first issue' },
+    sources: { tree: '文件树', readme: 'README', community: '社区资料', release: 'Release', firstIssues: 'good first issue', inherited: '所有者的 .github 仓库' },
+    export: {
+      checked: '检查时间', coverage: '已验证的评分权重', category: '类别', score: '分数', unknown: '未知',
+      checks: '检查项', fixes: '修复建议', none: '没有发现缺失项。', notes: '备注',
+      issueOne: 'Repo Doctor 建议了 1 项仓库改进', issueMany: 'Repo Doctor 建议了 {n} 项仓库改进',
+      issueIntro: 'Repo Doctor 于 {date} 为本仓库打出 **{score}/100** 分（{health}）。', issueFooter: '由 [Repo Doctor]({url}) v{version} 生成。',
+    },
     roast: {
       readme: '你的代码加入了证人保护计划。写个 README，大家才知道它是干什么的。',
       ci: '没有 CI？真勇敢。每次合并都像在走没有安全绳的钢丝。',
@@ -257,7 +274,7 @@ const REPORT = {
     evidence: {
       unknown: '取得できた GitHub のデータでは確認できませんでした。',
       'readme.pass': 'GitHub から空でない README が返されました。', 'readme.warn': '読み取れる README が見つかりませんでした。',
-      installation: 'README でインストール手順やクイックスタートを確認しました。', usage: 'README で使い方や例の見出しを確認しました。',
+      installation: 'README でインストールやクイックスタートの見出し、コマンド、リンクを確認しました。', usage: 'README で使い方・例・ドキュメントの見出し、コード例、ドキュメントへのリンクを確認しました。',
       'demo.site': 'リポジトリのウェブサイト：{url}', demo: 'README でバッジ以外の画像、動画、デモリンクを確認し、ウェブサイト欄もチェックしました。',
       badge: 'README で既知の CI バッジの URL を確認しました。',
       'license.spdx': 'GitHub が {spdx} と判定しました。', license: 'GitHub のメタデータと一般的なライセンスファイルを確認しました。ファイルがあっても法的な有効性は保証されません。',
@@ -266,11 +283,12 @@ const REPORT = {
       'first-issue.disabled': 'Issue が無効になっているため、初めての人が参加するきっかけがありません。', 'first-issue': '“good first issue” ラベル付きの Issue（オープン・クローズ問わず）を探しました。ラベル自体は GitHub が自動で作成するため、ラベルだけでは合格になりません。',
       ci: '自動化の設定ファイルを検出しました。ワークフローの実行や成功は確認していません。', tests: '一般的なテストのパスとファイル名を確認しました。カバレッジや正しさは測定していません。',
       'releases.tag': '最新の正式リリース：{tag}。', releases: '公開済みの正式な GitHub リリース（下書き・プレリリース以外）が見つかりませんでした。',
-      security: 'SECURITY.md または同等のポリシーファイルを確認しました。', dependencies: 'Dependabot または Renovate の設定を確認しました。組織レベルの設定はここでは見えません。',
+      security: 'リポジトリとオーナーの .github リポジトリで SECURITY.md または同等のポリシーファイルを確認しました。', dependencies: 'Dependabot または Renovate の設定を確認しました。組織レベルの設定はここでは見えません。',
       'security-automation': 'ワークフローのファイル名による推定です。デフォルト設定や組織レベルのスキャナーは見えない場合があります。',
       manifest: '既知のパッケージ/ビルドのマニフェストを確認しました。',
       'lockfile.na': '検出されたエコシステムではロックファイルは不要なため、減点しません。', lockfile: '既知のロックファイルとバージョン固定の依存ファイルを確認しました。意図的に省略するライブラリもあります。',
-      layout: '一般的なソース、ドキュメント、サンプルのディレクトリを確認しました。', editor: '一般的なフォーマッター/リンターの設定ファイルを確認しました。',
+      layout: '一般的なソース・ドキュメント・サンプルのディレクトリと、複数のトップレベルディレクトリへの整理を確認しました。', editor: '一般的なフォーマッター/リンターの設定ファイルを確認しました。',
+      inherited: '{source} から継承しています。独自のファイルがないリポジトリには、GitHub がこれを適用します。',
     },
     actions: {
       'Create README.md on GitHub': 'GitHub で README.md を作成', 'Edit README on GitHub': 'GitHub で README を編集',
@@ -288,7 +306,13 @@ const REPORT = {
       description: 'About の説明が短いか、ありません。プロジェクトの目的と対象を書きましょう（採点対象外）。', topics: 'Topics が設定されていません。Topics は GitHub 検索で見つけてもらうのに役立ちます（採点対象外）。',
       source: '{source} の取得に失敗：{error}',
     },
-    sources: { tree: 'ファイルツリー', readme: 'README', community: 'コミュニティ情報', release: 'リリース', firstIssues: 'good first issue' },
+    sources: { tree: 'ファイルツリー', readme: 'README', community: 'コミュニティ情報', release: 'リリース', firstIssues: 'good first issue', inherited: 'オーナーの .github リポジトリ' },
+    export: {
+      checked: '診断日時', coverage: '確認できた配点', category: 'カテゴリ', score: 'スコア', unknown: '不明',
+      checks: '診断項目', fixes: '修正の提案', none: '不足している項目はありません。', notes: '補足',
+      issueOne: 'Repo Doctor からの改善提案（1 件）', issueMany: 'Repo Doctor からの改善提案（{n} 件）',
+      issueIntro: 'Repo Doctor による {date} の診断結果：**{score}/100**（{health}）。', issueFooter: '[Repo Doctor]({url}) v{version} で作成しました。',
+    },
     roast: {
       readme: 'あなたのコードは証人保護プログラムに入ったようです。README があれば、何をするものか分かるのですが。',
       ci: 'CI なし？ 大胆ですね。毎回のマージが、命綱なしの綱渡りです。',
@@ -343,6 +367,8 @@ const errorFromMessage = (lang, message) => {
 function evidenceKey(check) {
   if (check.status === 'unknown') return ['unknown', {}];
   const text = check.evidence;
+  const inherited = text.match(/^Inherited from (.+?): (.+?)\. GitHub/);
+  if (inherited) return ['inherited', { source: `${inherited[1]}/${inherited[2]}` }];
   const variants = {
     readme: () => [`readme.${check.status}`, {}],
     demo: () => text.startsWith('Repository website: ') ? ['demo.site', { url: text.slice(20) }] : ['demo', {}],
@@ -354,13 +380,10 @@ function evidenceKey(check) {
   return (variants[check.id] || (() => [check.id, {}]))();
 }
 
-// Translated view of a report for rendering. English returns the engine's own text.
+// Translated view of a report for rendering and exports (same shape as englishView in lib/doctor.js).
 export function localizeReport(lang, report) {
   const r = REPORT[lang];
-  if (!r) return {
-    category: name => name, health: report.health, disclaimer: report.disclaimer, notes: report.notes,
-    check: c => ({ title: c.title, fix: c.fix, evidence: c.evidence, actionLabel: c.action?.label }),
-  };
+  if (!r) return englishView(report);
   const noteKeys = [
     [/^GitHub truncated/, 'truncated'], [/community profile is unavailable/, 'community'], [/is archived/, 'archived'],
     [/is a fork/, 'fork'], [/About description/, 'description'], [/No repository topics/, 'topics'],
@@ -372,6 +395,7 @@ export function localizeReport(lang, report) {
     return failed ? fill(r.notes.source, { source: r.sources[failed[1]] || failed[1], error: errorFromMessage(lang, failed[2]) }) : text;
   };
   return {
+    text: { ...englishView(report).text, ...r.export },
     category: name => r.category[name] || name,
     health: r.health[report.health] || report.health,
     disclaimer: r.disclaimer,

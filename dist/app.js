@@ -1,8 +1,9 @@
-import { analyzeRepository, badgeMarkdown, CATEGORIES, parseRepo, roast, roastId, toIssue, toMarkdown } from './lib/doctor.js';
+import { analyzeRepository, badgeMarkdown, CATEGORIES, compareReports, parseRepo, roast, roastId, toIssue, toMarkdown } from './lib/doctor.js';
 import { categoryName, detectLanguage, errorText, LANGUAGES, localizeReport, roastText, t } from './i18n.js';
 
 const $ = id => document.getElementById(id);
 let report = null;
+let changes = null;
 let filter = 'all';
 let busy = false;
 let roastMode = false;
@@ -57,8 +58,9 @@ function readRecent() {
   try { const list = JSON.parse(storage.get(RECENT_KEY) || '[]'); return Array.isArray(list) ? list.filter(r => typeof r?.repository === 'string').slice(0, 5) : []; }
   catch { return []; }
 }
+const sameRepo = (a, b) => a.toLowerCase() === b.toLowerCase();
 function remember(entry) {
-  storage.set(RECENT_KEY, JSON.stringify([entry, ...readRecent().filter(r => r.repository !== entry.repository)].slice(0, 5)));
+  storage.set(RECENT_KEY, JSON.stringify([entry, ...readRecent().filter(r => !sameRepo(r.repository, entry.repository))].slice(0, 5)));
   renderRecent();
 }
 function renderRecent() {
@@ -93,8 +95,19 @@ function renderChecks(L) {
   }).join('') || `<p class="empty-filter">${escape(t(lang, 'filter.empty'))}</p>`;
 }
 
+function renderChanges(L) {
+  $('changes').hidden = !changes;
+  if (!changes) return;
+  const names = ids => ids.map(id => L.check(report.checks.find(c => c.id === id)).title).join(t(lang, 'list.sep'));
+  const score = changes.delta > 0 ? t(lang, 'changes.up', { n: changes.delta }) : changes.delta < 0 ? t(lang, 'changes.down', { n: -changes.delta }) : t(lang, 'changes.same');
+  const date = changes.since ? new Date(changes.since).toLocaleString(lang) : '—';
+  $('changes').className = changes.delta > 0 || (!changes.delta && changes.fixed.length) ? 'better' : changes.delta < 0 || changes.regressed.length ? 'worse' : '';
+  $('changes').innerHTML = `<strong>${escape(t(lang, 'changes.since', { date }))} · ${escape(score)}</strong>${changes.fixed.length ? `<span>✓ ${escape(t(lang, 'changes.fixed', { list: names(changes.fixed) }))}</span>` : ''}${changes.regressed.length ? `<span>! ${escape(t(lang, 'changes.regressed', { list: names(changes.regressed) }))}</span>` : ''}`;
+}
+
 function render() {
   const L = localizeReport(lang, report);
+  renderChanges(L);
   $('welcome').hidden = true;
   $('report').hidden = false;
   document.title = t(lang, 'doc.title', { repo: report.repository, score: report.score ?? '—' });
@@ -130,6 +143,7 @@ function render() {
 function setBusy(value) {
   busy = value;
   $('scan-button').disabled = value;
+  $('recheck').disabled = value;
   document.querySelectorAll('[data-repo]').forEach(b => { b.disabled = value; });
   if (value) $('scan-button').textContent = t(lang, 'scan.busy');
   else $('scan-button').innerHTML = t(lang, 'scan.button');
@@ -140,11 +154,11 @@ const codedError = ({ error, code, resetAt }) => Object.assign(new Error(error |
 
 // Prefer this site's server (its own GitHub token, shared cache). Fall back to calling GitHub
 // from the browser when the server is not configured, unreachable, or itself rate-limited.
-async function check(repository) {
+async function check(repository, fresh) {
   if (serverAvailable) {
     setStatus('server');
     try {
-      const response = await fetch(`/api/check${repoQuery(repository)}`, { signal: AbortSignal.timeout(30000) });
+      const response = await fetch(`/api/check${repoQuery(repository)}${fresh ? '&fresh=1' : ''}`, { signal: AbortSignal.timeout(30000) });
       const body = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
       if (response.ok && body?.checks) return body;
       if (body?.code === 'not_found' || body?.code === 'bad_input') throw codedError(body);
@@ -157,6 +171,7 @@ async function check(repository) {
   return analyzeRepository(repository, { onProgress: message => setStatus(message) });
 }
 
+// Checking the repository already on screen again ("Check again", or typing it again) asks for fresh data.
 async function scan(input, { scroll = true } = {}) {
   if (busy) throw Object.assign(new Error('A check is already running.'), { code: 'busy' });
   let repository;
@@ -165,13 +180,17 @@ async function scan(input, { scroll = true } = {}) {
   setBusy(true);
   showError(null);
   try {
-    report = await check(repository);
+    const fresh = !!report && sameRepo(report.repository, repository);
+    const next = await check(repository, fresh);
+    const previous = readRecent().find(r => sameRepo(r.repository, next.repository));
+    changes = previous && previous.checkedAt !== next.checkedAt ? compareReports(previous, next) : null;
+    report = next;
     $('repo-input').value = `https://github.com/${report.repository}`;
     history.replaceState(null, '', repoQuery(report.repository) + (new URLSearchParams(location.search).has('lang') ? `&lang=${lang}` : ''));
     render();
-    remember({ repository: report.repository, score: report.score });
+    remember({ repository: report.repository, score: report.score, checkedAt: report.checkedAt, passed: report.checks.filter(c => c.status === 'pass').map(c => c.id) });
     setStatus('done', { n: report.checks.length, partial: report.coverage < 100, quota: report.rateLimit?.remaining });
-    if (scroll) $('report').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+    if (scroll && !fresh) $('report').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
     return { repository: report.repository, score: report.score, coverage: report.coverage, suggestions: report.suggestions.map(c => c.fix) };
   } catch (error) {
     showError(error);
@@ -209,14 +228,15 @@ for (const mode of ['doctor', 'roast']) $(mode + '-mode').addEventListener('clic
   $('roast').hidden = !roastMode;
 });
 $('export-markdown').addEventListener('click', () => {
-  if (report) download(`${report.repository.replace('/', '-')}-health.md`, toMarkdown(report), 'text/markdown;charset=utf-8');
+  if (report) download(`${report.repository.replace('/', '-')}-health.md`, toMarkdown(report, localizeReport(lang, report)), 'text/markdown;charset=utf-8');
 });
 $('export-json').addEventListener('click', () => {
   if (report) download(`${report.repository.replace('/', '-')}-health.json`, JSON.stringify(report, null, 2), 'application/json');
 });
 $('share-report').addEventListener('click', e => { if (report) copy(reportLink(), e.currentTarget); });
 $('copy-badge').addEventListener('click', e => { if (report) copy($('badge-code').textContent, e.currentTarget); });
-$('open-issue').addEventListener('click', () => { if (report) open(toIssue(report).url, '_blank', 'noopener,noreferrer'); });
+$('open-issue').addEventListener('click', () => { if (report) open(toIssue(report, localizeReport(lang, report)).url, '_blank', 'noopener,noreferrer'); });
+$('recheck').addEventListener('click', () => { if (report) scan(report.repository).catch(() => {}); });
 
 applyLanguage();
 const linked = new URLSearchParams(location.search).get('repo');

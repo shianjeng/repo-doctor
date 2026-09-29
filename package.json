@@ -1,6 +1,6 @@
 {
   "name": "@shianjeng/repo-doctor",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Paste a GitHub repository URL. Get a 30-second open-source health check.",
   "type": "module",
   "bin": { "repo-doctor": "bin/repo-doctor.js" },
